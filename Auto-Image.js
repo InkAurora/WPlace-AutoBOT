@@ -453,7 +453,7 @@
       initMessage: "Nhấp 'Tải lên hình ảnh' để bắt đầu",
       waitingInit: "Đang chờ khởi tạo...",
       resizeSuccess: "✅ Đã thay đổi kích thước hình ảnh thành {width}x{height}",
-      paintingPaused: "⏸️ Tạm dừng vẽ tại vị trí X: {x}, Y: {y}",
+      paintingPaused: "⏸️ Melukis dijeda di posisi X: {x}, Y: {y}",
       captchaNeeded: "❗ Cần token CAPTCHA. Vẽ một pixel thủ công để tiếp tục.",
       saveData: "Lưu tiến trình",
       loadData: "Tải tiến trình",
@@ -583,14 +583,14 @@
       paintingProgress: "🧱 Progres: {painted}/{total} piksel...",
       noCharges: "⌛ Tidak ada muatan. Menunggu {time}...",
       paintingStopped: "⏹️ Melukis dihentikan oleh pengguna",
-      paintingComplete: "✅ Melukis selesai! {count} piksel telah dilukis.",
+      paintingComplete: "✅ Melukis selesai! {count} piksel đã được vẽ.",
       paintingError: "❌ Kesalahan selama melukis",
       missingRequirements: "❌ Unggah gambar dan pilih posisi terlebih dahulu",
       progress: "Progres",
       pixels: "Piksel",
       charges: "Muatan",
       estimatedTime: "Perkiraan waktu",
-      initMessage: "Klik 'Unggah Gambar' untuk memulai",
+      initMessage: "Klik 'Unggah Gambar' để memulai",
       waitingInit: "Menunggu inisialisasi...",
       resizeSuccess: "✅ Gambar berhasil diubah ukurannya menjadi {width}x{height}",
       paintingPaused: "⏸️ Melukis dijeda di posisi X: {x}, Y: {y}",
@@ -2742,8 +2742,8 @@
         -webkit-appearance: none;
         width: 18px;
         height: 18px;
-        background: ${theme.highlight};
         border-radius: 50%;
+        background: ${theme.highlight};
         cursor: pointer;
         border: 2px solid ${theme.primary};
       }
@@ -3291,7 +3291,7 @@
 
         #speedSlider::-webkit-slider-thumb:hover, #overlayOpacitySlider::-webkit-slider-thumb:hover {
           transform: scale(1.2);
-          box-shadow: 0 4px 8px rgba(0,0,0,0.4), 0 0 0 3px #4facfe;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.4), 0 0 0 0 3px #4facfe;
         }
 
         #speedSlider::-moz-range-thumb, #overlayOpacitySlider::-moz-range-thumb {
@@ -4331,6 +4331,25 @@
     loadBotSettings();
   }
 
+  // Utility to get the color of a pixel from the canvas
+  async function getCanvasPixelColor(regionX, regionY, pixelX, pixelY) {
+    try {
+      const tileUrl = `https://backend.wplace.live/s0/tile/${regionX}/${regionY}.png`;
+      const res = await fetch(tileUrl, { credentials: "include" });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const bitmap = await createImageBitmap(blob);
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0);
+      const imgData = ctx.getImageData(pixelX, pixelY, 1, 1).data;
+      return [imgData[0], imgData[1], imgData[2]];
+    } catch (e) {
+      console.error("Failed to get canvas pixel color:", e);
+      return null;
+    }
+  }
+
   async function processImage() {
     const { width, height, pixels } = state.imageData
     const { x: startX, y: startY } = state.startPosition
@@ -4382,11 +4401,19 @@
 
           let absX = startX + x;
           let absY = startY + y;
-
           let adderX = Math.floor(absX / 1000);
           let adderY = Math.floor(absY / 1000);
           let pixelX = absX % 1000;
           let pixelY = absY % 1000;
+
+          // --- Skip painting if pixel already matches desired color ---
+          const canvasColor = await getCanvasPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
+          if (canvasColor) {
+            const canvasColorId = findClosestColor(canvasColor, state.availableColors);
+            if (canvasColorId === colorId) {
+              continue; // Skip painting this pixel
+            }
+          }
 
           if (!pixelBatch ||
             pixelBatch.regionX !== regionX + adderX ||
