@@ -4332,9 +4332,14 @@
   }
 
   // Utility to get the color of a pixel from the canvas
-  async function getCanvasPixelColor(regionX, regionY, pixelX, pixelY) {
+  // --- Tile caching system ---
+  const tileCache = new Map(); // key: `${regionX},${regionY}` value: ImageData
+
+  async function fetchAndCacheTile(regionX, regionY) {
+    const tileKey = `${regionX},${regionY}`;
+    if (tileCache.has(tileKey)) return tileCache.get(tileKey);
     try {
-      const tileUrl = `https://backend.wplace.live/s0/tile/${regionX}/${regionY}.png`;
+      const tileUrl = `https://backend.wplace.live/files/s0/tiles/${regionX}/${regionY}.png`;
       const res = await fetch(tileUrl, { credentials: "include" });
       if (!res.ok) return null;
       const blob = await res.blob();
@@ -4342,12 +4347,22 @@
       const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
       const ctx = canvas.getContext("2d");
       ctx.drawImage(bitmap, 0, 0);
-      const imgData = ctx.getImageData(pixelX, pixelY, 1, 1).data;
-      return [imgData[0], imgData[1], imgData[2]];
+      const imgData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+      tileCache.set(tileKey, imgData);
+      return imgData;
     } catch (e) {
-      console.error("Failed to get canvas pixel color:", e);
+      console.error("Failed to fetch/cache tile:", e);
       return null;
     }
+  }
+
+  function getCachedPixelColor(regionX, regionY, pixelX, pixelY) {
+    const tileKey = `${regionX},${regionY}`;
+    const imgData = tileCache.get(tileKey);
+    if (!imgData) return null;
+    const idx = (pixelY * imgData.width + pixelX) * 4;
+    const data = imgData.data;
+    return [data[idx], data[idx + 1], data[idx + 2]];
   }
 
   async function processImage() {
@@ -4367,6 +4382,24 @@
     let pixelBatch = null;
 
     try {
+      // Pre-cache all affected tiles
+      const affectedTiles = new Set();
+      for (let y = startRow; y < height; y++) {
+        for (let x = y === startRow ? startCol : 0; x < width; x++) {
+          let absX = startX + x;
+          let absY = startY + y;
+          let adderX = Math.floor(absX / 1000);
+          let adderY = Math.floor(absY / 1000);
+          affectedTiles.add(`${regionX + adderX},${regionY + adderY}`);
+        }
+      }
+      
+      // Fetch all tiles in parallel
+      await Promise.all([...affectedTiles].map(tileKey => {
+        const [tx, ty] = tileKey.split(",").map(Number);
+        return fetchAndCacheTile(tx, ty);
+      }));
+
       outerLoop: for (let y = startRow; y < height; y++) {
         for (let x = y === startRow ? startCol : 0; x < width; x++) {
           if (state.stopFlag) {
@@ -4406,12 +4439,12 @@
           let pixelX = absX % 1000;
           let pixelY = absY % 1000;
 
-          // --- Skip painting if pixel already matches desired color ---
-          const canvasColor = await getCanvasPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
+          // Check if pixel already matches desired color using cached tile data
+          const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
             const canvasColorId = findClosestColor(canvasColor, state.availableColors);
             if (canvasColorId === colorId) {
-              continue; // Skip painting this pixel
+              continue; // Skip painting this pixel if it already matches
             }
           }
 
