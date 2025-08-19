@@ -41,25 +41,15 @@ This project was fork from https://github.com/DarkModde/WPlace-AutoBOT
 <br>
 
 ### 🎯┃Auto-Farm
-
 #### AUTOFARM USES CHARGES TO GET LEVELS, IT DOES NOT DRAW AN IMAGE FOR YOU. PLEASE USE AUTO-IMAGE FOR THAT
-
 ```js
-javascript: fetch(
-  "https://raw.githubusercontent.com/InkAurora/WPlace-AutoBOT/refs/heads/main/Auto-Farm.js"
-)
-  .then((t) => t.text())
-  .then(eval);
+javascript:fetch("https://raw.githubusercontent.com/InkAurora/WPlace-AutoBOT/refs/heads/main/Auto-Farm.js").then(t=>t.text()).then(eval);
 ```
 
 ### 🖼️┃Auto-Image
 
 ```js
-javascript: fetch(
-  "https://raw.githubusercontent.com/InkAurora/WPlace-AutoBOT/refs/heads/main/Auto-Image.js"
-)
-  .then((t) => t.text())
-  .then(eval);
+javascript:fetch("https://raw.githubusercontent.com/InkAurora/WPlace-AutoBOT/refs/heads/main/Auto-Image.js").then(t=>t.text()).then(eval);
 ```
 
 <details>
@@ -79,10 +69,10 @@ javascript: fetch(
 
 </details>
 
+
 <br>
 
 > [!IMPORTANT]
->
 > <p><sub><strong>1.</strong> None of the scripts will work if you close the browser tab. You must keep the WPlace tab open, even if it's in the background.</sub></p>
 > <p><sub><strong>2.</strong> Never run both scripts on the same page — this can bug your WPlace. If it happens, just refresh the page!</sub></p>
 > <p><sub><strong>3.</strong> If the script doesn’t detect the available colors, just click the "Paint" button to show them — only then start the Auto-Imager.</sub></p>
@@ -92,13 +82,15 @@ javascript: fetch(
 ### ✨┃Features
 
 - [x] Automatically farms droplets/levels
-- [x] Overlay
+- [x] Overlay 
 - [x] Paint over multiple tiles
 - [x] AutoCaptcha Solver
 - [x] MultiLanguage Support
 - [x] Multi account through save and load feature
 
+
 ---
+
 
 ---
 
@@ -111,7 +103,7 @@ javascript: fetch(
 ### 📋┃To-do
 
 - [x] Making AutoFarm working
-- [ ] Merge both scripts into one
+- [ ] Merge both scripts into one  
 - [x] Add Overlay system
 - [x] Add Cross Tiles Support
 - [x] Add AutoCaptcha Solver
@@ -123,6 +115,7 @@ javascript: fetch(
 
 - Contributors:  
   <img src="https://contrib.rocks/image?repo=Wplace-AutoBot/WPlace-AutoBOT" alt="Contributors" />
+
 
 <p align="center">
   <a href="#"><img src="https://komarev.com/ghpvc/?username=WPlace-AutoBOT&style=for-the-badge&label=Views:&color=gray"/></a>
