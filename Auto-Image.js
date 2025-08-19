@@ -1501,11 +1501,11 @@
     },
   }
 
-  // COLOR MATCHING FUNCTION - Optimized with caching
+  // COLOR MATCHING FUNCTION - Only uses exact colors that this account has available
   const colorCache = new Map()
 
-  function findClosestColor(targetRgb, availableColors) {
-    const cacheKey = `${targetRgb[0]},${targetRgb[1]},${targetRgb[2]}`
+  function findClosestColor(targetRgb, availableColors, checkAvailability = true) {
+    const cacheKey = `${targetRgb[0]},${targetRgb[1]},${targetRgb[2]},${checkAvailability}`
 
     if (colorCache.has(cacheKey)) {
       return colorCache.get(cacheKey)
@@ -1520,20 +1520,16 @@
       }
     }
 
-    let minDistance = Number.POSITIVE_INFINITY
-    let closestColorId = availableColors[0]?.id || 1
+    // Find exact color match only - no approximation
+    const exactMatch = availableColors.find(c => 
+      c.rgb[0] === targetRgb[0] && 
+      c.rgb[1] === targetRgb[1] && 
+      c.rgb[2] === targetRgb[2]
+    );
 
-    for (let i = 0; i < availableColors.length; i++) {
-      const color = availableColors[i]
-      const distance = Utils.colorDistance(targetRgb, color.rgb)
-      if (distance < minDistance) {
-        minDistance = distance
-        closestColorId = color.id
-        if (distance === 0) break
-      }
-    }
-
-    colorCache.set(cacheKey, closestColorId)
+    // Return null if the exact color isn't available to this account
+    const colorId = exactMatch ? exactMatch.id : null;
+    colorCache.set(cacheKey, colorId)
 
     if (colorCache.size > 10000) {
       const firstKey = colorCache.keys().next().value
@@ -4430,7 +4426,13 @@
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
 
-          const colorId = findClosestColor([r, g, b], state.availableColors);
+          // Try to find an exact color match from the colors this account has available
+          const colorId = findClosestColor([r, g, b], state.availableColors, true);
+          if (colorId === null) {
+            // Skip this pixel - we'll paint it with a different account that has this color
+            state.paintedMap[y][x] = false; // Ensure it remains unpainted for next time
+            continue;
+          }
 
           let absX = startX + x;
           let absY = startY + y;
@@ -4442,7 +4444,7 @@
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
-            const canvasColorId = findClosestColor(canvasColor, state.availableColors);
+            const canvasColorId = findClosestColor(canvasColor, state.availableColors, false);
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
             }
