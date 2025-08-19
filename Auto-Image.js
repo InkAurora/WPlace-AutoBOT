@@ -1501,11 +1501,11 @@
     },
   }
 
-  // COLOR MATCHING FUNCTION - Only uses exact colors that this account has available
+  // COLOR MATCHING FUNCTION - Optimized with caching
   const colorCache = new Map()
 
-  function findClosestColor(targetRgb, availableColors, checkAvailability = true) {
-    const cacheKey = `${targetRgb[0]},${targetRgb[1]},${targetRgb[2]},${checkAvailability}`
+  function findClosestColor(targetRgb, availableColors) {
+    const cacheKey = `${targetRgb[0]},${targetRgb[1]},${targetRgb[2]}`
 
     if (colorCache.has(cacheKey)) {
       return colorCache.get(cacheKey)
@@ -1520,16 +1520,20 @@
       }
     }
 
-    // Find exact color match only - no approximation
-    const exactMatch = availableColors.find(c => 
-      c.rgb[0] === targetRgb[0] && 
-      c.rgb[1] === targetRgb[1] && 
-      c.rgb[2] === targetRgb[2]
-    );
+    let minDistance = Number.POSITIVE_INFINITY
+    let closestColorId = availableColors[0]?.id || 1
 
-    // Return null if the exact color isn't available to this account
-    const colorId = exactMatch ? exactMatch.id : null;
-    colorCache.set(cacheKey, colorId)
+    for (let i = 0; i < availableColors.length; i++) {
+      const color = availableColors[i]
+      const distance = Utils.colorDistance(targetRgb, [color.rgb[0], color.rgb[1], color.rgb[2]])
+      if (distance < minDistance) {
+        minDistance = distance
+        closestColorId = color.id
+        if (distance === 0) break
+      }
+    }
+
+    colorCache.set(cacheKey, closestColorId)
 
     if (colorCache.size > 10000) {
       const firstKey = colorCache.keys().next().value
@@ -4257,6 +4261,8 @@
       updateUI("startPaintingMsg", "success")
 
       try {
+        // Clear tile cache to ensure we get fresh tile data
+        clearTileCache();
         await processImage()
         return true
       } catch {
@@ -4330,6 +4336,11 @@
   // Utility to get the color of a pixel from the canvas
   // --- Tile caching system ---
   const tileCache = new Map(); // key: `${regionX},${regionY}` value: ImageData
+
+  function clearTileCache() {
+    tileCache.clear();
+    console.log("Tile cache cleared");
+  }
 
   async function fetchAndCacheTile(regionX, regionY) {
     const tileKey = `${regionX},${regionY}`;
@@ -4426,11 +4437,13 @@
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
 
-          // Try to find an exact color match from the colors this account has available
-          const colorId = findClosestColor([r, g, b], state.availableColors, true);
-          if (colorId === null) {
-            // Skip this pixel - we'll paint it with a different account that has this color
-            state.paintedMap[y][x] = false; // Ensure it remains unpainted for next time
+          // Get the ideal color ID for this pixel
+          const colorId = findClosestColor([r, g, b], Object.values(CONFIG.COLOR_MAP).filter(c => c.rgb));
+
+          // Check if we have this color available
+          const hasColor = state.availableColors.some(c => c.id === colorId);
+          if (!hasColor) {
+            // Skip this pixel - we don't have the needed color
             continue;
           }
 
@@ -4444,7 +4457,7 @@
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
-            const canvasColorId = findClosestColor(canvasColor, state.availableColors, false);
+            const canvasColorId = findClosestColor(canvasColor, Object.values(CONFIG.COLOR_MAP).filter(c => c.rgb));
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
             }
