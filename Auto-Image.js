@@ -1525,7 +1525,7 @@
 
     for (let i = 0; i < availableColors.length; i++) {
       const color = availableColors[i]
-      const distance = Utils.colorDistance(targetRgb, [color.rgb[0], color.rgb[1], color.rgb[2]])
+      const distance = Utils.colorDistance(targetRgb, color.rgb)
       if (distance < minDistance) {
         minDistance = distance
         closestColorId = color.id
@@ -4261,8 +4261,6 @@
       updateUI("startPaintingMsg", "success")
 
       try {
-        // Clear tile cache to ensure we get fresh tile data
-        clearTileCache();
         await processImage()
         return true
       } catch {
@@ -4336,11 +4334,6 @@
   // Utility to get the color of a pixel from the canvas
   // --- Tile caching system ---
   const tileCache = new Map(); // key: `${regionX},${regionY}` value: ImageData
-
-  function clearTileCache() {
-    tileCache.clear();
-    console.log("Tile cache cleared");
-  }
 
   async function fetchAndCacheTile(regionX, regionY) {
     const tileKey = `${regionX},${regionY}`;
@@ -4437,15 +4430,7 @@
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
 
-          // Get the ideal color ID for this pixel
-          const colorId = findClosestColor([r, g, b], Object.values(CONFIG.COLOR_MAP).filter(c => c.rgb));
-
-          // Check if we have this color available
-          const hasColor = state.availableColors.some(c => c.id === colorId);
-          if (!hasColor) {
-            // Skip this pixel - we don't have the needed color
-            continue;
-          }
+          const colorId = findClosestColor([r, g, b], state.availableColors);
 
           let absX = startX + x;
           let absY = startY + y;
@@ -4457,7 +4442,7 @@
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
-            const canvasColorId = findClosestColor(canvasColor, Object.values(CONFIG.COLOR_MAP).filter(c => c.rgb));
+            const canvasColorId = findClosestColor(canvasColor, state.availableColors);
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
             }
