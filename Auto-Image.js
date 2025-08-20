@@ -1272,6 +1272,14 @@
 
     restoreProgress: (savedData) => {
       try {
+        // Check for available colors first
+        const availableColors = Utils.extractAvailableColors();
+        if (availableColors.length < 10) {
+          updateUI("noColorsFound", "error");
+          Utils.showAlert(Utils.t("noColorsFound"), "error");
+          return false;
+        }
+
         Object.assign(state, savedData.state)
 
         if (savedData.imageData) {
@@ -1285,12 +1293,10 @@
           state.paintedMap = savedData.paintedMap.map((row) => Array.from(row))
         }
 
-        // Overwrite available colors with currently available ones
-        const currentlyAvailableColors = Utils.extractAvailableColors();
-        if (currentlyAvailableColors.length > 0) {
-            console.log("Overwriting available colors from progress file with currently available colors.");
-            state.availableColors = currentlyAvailableColors;
-        }
+        // Update state with current available colors
+        state.availableColors = availableColors;
+        state.colorsChecked = true;
+        console.log("Using current available colors from palette.");
 
         return true
       } catch (error) {
