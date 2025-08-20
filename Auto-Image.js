@@ -4439,6 +4439,11 @@
 
           const colorId = findClosestColor([r, g, b], state.availableColors);
 
+          // Skip pixel if color is not available
+          if (colorId === undefined || colorId === null) {
+            continue;
+          }
+
           let absX = startX + x;
           let absY = startY + y;
           let adderX = Math.floor(absX / 1000);
