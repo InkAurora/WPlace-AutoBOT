@@ -1146,7 +1146,7 @@
 
       Array.from(colorElements).forEach((el) => {
         const id = Number.parseInt(el.id.replace("color-", ""))
-        if (id === 0) return // Skip transparent color
+        if (id === 0 || !id) return // Skip transparent color
 
         const rgbStr = el.style.backgroundColor.match(/\d+/g)
         const rgb = rgbStr ? rgbStr.map(Number) : [0, 0, 0]
