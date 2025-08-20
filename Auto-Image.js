@@ -4366,7 +4366,7 @@
     if (tileCache.has(tileKey)) return tileCache.get(tileKey);
     try {
       const tileUrl = `https://backend.wplace.live/files/s0/tiles/${regionX}/${regionY}.png`;
-      const res = await fetch(tileUrl, { credentials: "include" });
+      const res = await fetch(tileUrl);
       if (!res.ok) return null;
       const blob = await res.blob();
       const bitmap = await createImageBitmap(blob);
