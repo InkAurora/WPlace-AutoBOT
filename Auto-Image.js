@@ -4421,7 +4421,7 @@
             break outerLoop
           }
 
-          if (state.paintedMap[y][x]) continue
+          // if (state.paintedMap[y][x]) continue
 
           const idx = (y * width + x) * 4
           const r = pixels[idx]
