@@ -1379,12 +1379,14 @@
         // Set up overlay with restored data
         await overlayManager.setImage(imageBitmap);
         await overlayManager.setPosition(state.startPosition, state.region);
+        
+        // Ensure overlay is disabled
+        overlayManager.disable();
 
         // Update overlay button state
         const toggleOverlayBtn = document.getElementById('toggleOverlayBtn');
         if (toggleOverlayBtn) {
           toggleOverlayBtn.disabled = false;
-          // Keep overlay disabled by default
           toggleOverlayBtn.classList.remove('active');
         }
 
@@ -3790,7 +3792,14 @@
             updateStats()
 
             // Restore overlay if image data was loaded from localStorage
-            Utils.restoreOverlayFromData().catch(error => {
+            Utils.restoreOverlayFromData().then(() => {
+              // Ensure overlay stays disabled after restore
+              overlayManager.disable();
+              const toggleOverlayBtn = document.getElementById('toggleOverlayBtn');
+              if (toggleOverlayBtn) {
+                toggleOverlayBtn.classList.remove('active');
+              }
+            }).catch(error => {
               console.error('Failed to restore overlay from localStorage:', error);
             });
 
