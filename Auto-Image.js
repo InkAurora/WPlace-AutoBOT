@@ -4254,6 +4254,9 @@
       }
       await ensureToken()
       if (!turnstileToken) return false
+      
+      // Clear the tile cache to ensure fresh data
+      tileCache.clear()
 
       state.running = true
       state.stopFlag = false
