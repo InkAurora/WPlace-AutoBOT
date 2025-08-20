@@ -1559,6 +1559,14 @@
     return closestColorId
   }
 
+  function findExactColor(targetRgb, availableColors) {
+    return availableColors.find(c =>
+      c.rgb[0] === targetRgb[0] &&
+      c.rgb[1] === targetRgb[1] &&
+      c.rgb[2] === targetRgb[2]
+    )?.id || null
+  }
+
   // UI UPDATE FUNCTIONS (declared early to avoid reference errors)
   let updateUI = () => { }
   let updateStats = () => { }
@@ -4462,7 +4470,7 @@
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
 
-          const colorId = findClosestColor([r, g, b], state.availableColors);
+          const colorId = findExactColor([r, g, b], state.availableColors);
 
           // Skip pixel if color is not available
           if (colorId === undefined || colorId === null) {
