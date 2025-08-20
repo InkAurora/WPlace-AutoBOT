@@ -668,11 +668,12 @@
   // --- OVERLAY UPDATE: New OverlayManager class to handle all overlay logic ---
   class OverlayManager {
     constructor() {
-      this.isEnabled = false;
+      this.isEnabled = false; // Always start disabled
       this.startCoords = null; // { region: {x, y}, pixel: {x, y} }
       this.imageBitmap = null;
       this.chunkedTiles = new Map(); // Map<"tileX,tileY", ImageBitmap>
       this.tileSize = 1000;
+      this.wasEnabled = false; // Track if overlay was previously enabled
     }
 
     toggle() {
@@ -1378,13 +1379,13 @@
         // Set up overlay with restored data
         await overlayManager.setImage(imageBitmap);
         await overlayManager.setPosition(state.startPosition, state.region);
-        overlayManager.enable();
 
         // Update overlay button state
         const toggleOverlayBtn = document.getElementById('toggleOverlayBtn');
         if (toggleOverlayBtn) {
           toggleOverlayBtn.disabled = false;
-          toggleOverlayBtn.classList.add('active');
+          // Keep overlay disabled by default
+          toggleOverlayBtn.classList.remove('active');
         }
 
         console.log('Overlay restored from data');
@@ -4054,8 +4055,8 @@
         // Use the paletted canvas for the overlay
         const finalImageBitmap = await createImageBitmap(tempCanvas);
         await overlayManager.setImage(finalImageBitmap);
-        overlayManager.enable();
-        toggleOverlayBtn.classList.add('active');
+        // Keep overlay disabled by default
+        toggleOverlayBtn.classList.remove('active');
 
         updateStats();
         updateUI("resizeSuccess", "success", { width: newWidth, height: newHeight });
@@ -4146,9 +4147,9 @@
           // Use the original image for the overlay initially
           const imageBitmap = await createImageBitmap(processor.img);
           await overlayManager.setImage(imageBitmap);
-          overlayManager.enable();
           toggleOverlayBtn.disabled = false;
-          toggleOverlayBtn.classList.add('active');
+          // Keep overlay disabled by default
+          toggleOverlayBtn.classList.remove('active');
 
           // Only enable resize button if colors have also been captured
           if (state.colorsChecked) {
