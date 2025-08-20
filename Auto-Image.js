@@ -1285,6 +1285,13 @@
           state.paintedMap = savedData.paintedMap.map((row) => Array.from(row))
         }
 
+        // Overwrite available colors with currently available ones
+        const currentlyAvailableColors = Utils.extractAvailableColors();
+        if (currentlyAvailableColors.length > 0) {
+            console.log("Overwriting available colors from progress file with currently available colors.");
+            state.availableColors = currentlyAvailableColors;
+        }
+
         return true
       } catch (error) {
         console.error("Error restoring progress:", error)
