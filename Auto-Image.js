@@ -4466,8 +4466,7 @@
 
           // fill state.allColors with all the colors from CONFIG.COLOR_MAP
           for (const colorId in CONFIG.COLOR_MAP) {
-            const color = CONFIG.COLOR_MAP[colorId];
-            console.log(color);
+            console.log(colorId);
           }
 
           return;
