@@ -1092,10 +1092,7 @@
     },
 
     findClosestColorFromAllColors: (r, g, b) => {
-      const allColors = [];
-      Object.values(CONFIG.COLOR_MAP).forEach((color) => allColors.push([color.rgb.r, color.rgb.g, color.rgb.b]));
-      const test = []
-      test.push([r, g, b])
+      const allColors = Object.values(CONFIG.COLOR_MAP).map((color) => color.rgb !== null ? [color.rgb.r, color.rgb.g, color.rgb.b] : null).filter(color => color !== null);
       return Utils.findClosestPaletteColor(r, g, b, allColors);
     },
 
