@@ -640,6 +640,7 @@
     processing: false,
     totalPixels: 0,
     paintedPixels: 0,
+    allColors: [],
     availableColors: [],
     activeColorPalette: [], // User-selected colors for conversion
     paintWhitePixels: true, // Default to ON
@@ -1682,8 +1683,6 @@
       });
 
       updateActiveColorPalette();
-
-      state.activeColorPalette.forEach((color) => { console.log(color) });
     }
 
     // Initialize with only available colors
@@ -4463,6 +4462,14 @@
 
           if (alpha < CONFIG.TRANSPARENCY_THRESHOLD || (!state.paintWhitePixels && Utils.isWhitePixel(r, g, b))) {
             continue;
+          }
+
+          // fill state.allColors with all the colors from CONFIG.COLOR_MAP
+          for (const colorId in CONFIG.COLOR_MAP) {
+            const color = CONFIG.COLOR_MAP[colorId];
+            if (!state.allColors.includes(color)) {
+              state.allColors.push(color);
+            }
           }
 
           let targetRgb;
