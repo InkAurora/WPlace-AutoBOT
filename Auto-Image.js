@@ -4294,6 +4294,8 @@
       // Clear the tile cache to ensure fresh data
       tileCache.clear()
 
+      state.paintedPixels = 0;
+
       state.running = true
       state.stopFlag = false
       startBtn.disabled = true
