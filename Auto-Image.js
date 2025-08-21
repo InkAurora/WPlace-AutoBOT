@@ -4404,8 +4404,8 @@
     const { x: startX, y: startY } = state.startPosition
     const { x: regionX, y: regionY } = state.region
 
-    const startRow = state.lastPosition.y || 0
-    const startCol = state.lastPosition.x || 0
+    const startRow = 0
+    const startCol = 0
 
     if (!state.paintedMap) {
       state.paintedMap = Array(height)
@@ -4469,6 +4469,8 @@
           } else {
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
+
+          state.activeColorPalette.forEach((color) => { console.log(color) });
 
           const colorId = findExactColor([r, g, b], state.availableColors);
 
