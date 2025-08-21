@@ -4467,8 +4467,13 @@
           // fill state.allColors with all the colors from CONFIG.COLOR_MAP
           for (const colorId in CONFIG.COLOR_MAP) {
             const colorEntry = CONFIG.COLOR_MAP[colorId];
-            console.log(colorEntry.rgb);
+            const colorRGB = [colorEntry.rgb.r, colorEntry.rgb.g, colorEntry.rgb.b];
+            if (!state.allColors.includes(colorRGB)) {
+              state.allColors.push(colorRGB);
+            }
           }
+
+          state.allColors.forEach((color) => { console.log(color) });
 
           return;
 
