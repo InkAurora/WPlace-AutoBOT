@@ -4485,7 +4485,6 @@
 
           // Skip pixel if color is not available
           if (colorId === undefined || colorId === null) {
-            state.paintedPixels++;
             continue;
           }
 
