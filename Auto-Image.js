@@ -1086,7 +1086,7 @@
     },
 
     findColorId: (r, g, b) => {
-      const color = Object.values(CONFIG.COLOR_MAP).find(color =>
+      const color = Object.values(CONFIG.COLOR_MAP).filter(color => color.rgb !== null).find(color =>
         color.rgb.r === r && color.rgb.g === g && color.rgb.b === b
       );
       return color ? color.id : null;
