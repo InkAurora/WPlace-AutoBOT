@@ -4483,6 +4483,7 @@
 
           // Skip pixel if color is not available
           if (colorId === undefined || colorId === null) {
+            state.paintedPixels++;
             continue;
           }
 
@@ -4498,6 +4499,7 @@
           if (canvasColor && canvasColor[3] >= CONFIG.TRANSPARENCY_THRESHOLD) {
             const canvasColorId = Utils.findColorId(canvasColor[0], canvasColor[1], canvasColor[2]);
             if (canvasColorId === colorId) {
+              state.paintedPixels++;
               continue; // Skip painting this pixel if it already matches
             }
           }
