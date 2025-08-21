@@ -640,6 +640,7 @@
     processing: false,
     totalPixels: 0,
     paintedPixels: 0,
+    allColors: [],
     availableColors: [],
     activeColorPalette: [], // User-selected colors for conversion
     paintWhitePixels: true, // Default to ON
@@ -1092,8 +1093,7 @@
     },
 
     findClosestColorFromAllColors: (r, g, b) => {
-      const allColors = Object.values(CONFIG.COLOR_MAP).map((color) => color.rgb !== null ? [color.rgb.r, color.rgb.g, color.rgb.b] : null).filter(color => color !== null);
-      return Utils.findClosestPaletteColor(r, g, b, allColors);
+      return Utils.findClosestPaletteColor(r, g, b, state.allColors);
     },
 
     isWhitePixel: (r, g, b) =>
@@ -4451,6 +4451,8 @@
         console.warn("Some tiles could not be fetched, aborting...");
         return;
       }
+
+      state.allColors = Object.values(CONFIG.COLOR_MAP).map((color) => color.rgb !== null ? [color.rgb.r, color.rgb.g, color.rgb.b] : null).filter(color => color !== null);
 
       outerLoop: for (let y = startRow; y < height; y++) {
         for (let x = y === startRow ? startCol : 0; x < width; x++) {
