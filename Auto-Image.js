@@ -640,7 +640,6 @@
     processing: false,
     totalPixels: 0,
     paintedPixels: 0,
-    allColors: [],
     availableColors: [],
     activeColorPalette: [], // User-selected colors for conversion
     paintWhitePixels: true, // Default to ON
@@ -1083,6 +1082,13 @@
         }
       }
       return cor;
+    },
+
+    findColorId: (r, g, b) => {
+      const color = Object.values(CONFIG.COLOR_MAP).find(color =>
+        color.rgb.r === r && color.rgb.g === g && color.rgb.b === b
+      );
+      return color ? color.id : null;
     },
 
     isWhitePixel: (r, g, b) =>
@@ -4464,26 +4470,6 @@
             continue;
           }
 
-          // fill state.allColors with all the colors from CONFIG.COLOR_MAP
-          for (const colorId in CONFIG.COLOR_MAP) {
-            const colorEntry = CONFIG.COLOR_MAP[colorId];
-            const colorRGB = [colorEntry.rgb.r, colorEntry.rgb.g, colorEntry.rgb.b];
-            if (!state.allColors.includes(colorRGB)) {
-              state.allColors.push(colorRGB);
-            }
-          }
-
-          state.allColors.forEach((color) => { console.log(color) });
-
-          return;
-
-          let targetRgb;
-          if (Utils.isWhitePixel(r, g, b)) {
-            targetRgb = [255, 255, 255];
-          } else {
-            targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
-          }
-
           const colorId = findExactColor([r, g, b], state.availableColors);
 
           // Skip pixel if color is not available
@@ -4501,7 +4487,7 @@
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
-            const canvasColorId = findClosestColor(canvasColor, state.availableColors);
+            const canvasColorId = findColorId(canvasColor.r, canvasColor.g, canvasColor.b);
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
             }
