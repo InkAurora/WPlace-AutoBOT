@@ -4408,7 +4408,7 @@
     if (!imgData) return null;
     const idx = (pixelY * imgData.width + pixelX) * 4;
     const data = imgData.data;
-    return [data[idx], data[idx + 1], data[idx + 2]];
+    return [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]];
   }
 
   async function processImage() {
@@ -4495,7 +4495,7 @@
 
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
-          if (canvasColor) {
+          if (canvasColor && canvasColor[3] >= CONFIG.TRANSPARENCY_THRESHOLD) {
             const canvasColorId = Utils.findColorId(canvasColor[0], canvasColor[1], canvasColor[2]);
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
