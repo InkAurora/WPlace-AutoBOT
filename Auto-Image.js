@@ -1682,6 +1682,8 @@
       });
 
       updateActiveColorPalette();
+
+      state.activeColorPalette.forEach((color) => { console.log(color) });
     }
 
     // Initialize with only available colors
@@ -4469,8 +4471,6 @@
           } else {
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
           }
-
-          state.activeColorPalette.forEach((color) => { console.log(color) });
 
           const colorId = findExactColor([r, g, b], state.availableColors);
 
