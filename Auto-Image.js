@@ -4467,14 +4467,10 @@
           // fill state.allColors with all the colors from CONFIG.COLOR_MAP
           for (const colorId in CONFIG.COLOR_MAP) {
             const color = CONFIG.COLOR_MAP[colorId];
-            if (!state.allColors.includes(color)) {
-              state.allColors.push([color.rgb.r, color.rgb.g, color.rgb.b]);
-            }
+            console.log(color);
           }
 
-          state.allColors.forEach((color) => { console.log(color) })
-
-          return
+          return;
 
           let targetRgb;
           if (Utils.isWhitePixel(r, g, b)) {
