@@ -4487,7 +4487,7 @@
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor) {
-            const canvasColorId = Utils.findColorId(canvasColor.r, canvasColor.g, canvasColor.b);
+            const canvasColorId = Utils.findColorId(canvasColor[0], canvasColor[1], canvasColor[2]);
             if (canvasColorId === colorId) {
               continue; // Skip painting this pixel if it already matches
             }
