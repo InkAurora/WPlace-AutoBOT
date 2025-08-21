@@ -1236,8 +1236,8 @@
           timestamp: Date.now(),
           state: {
             totalPixels: state.totalPixels,
-            paintedPixels: state.paintedPixels,
-            lastPosition: state.lastPosition,
+            paintedPixels: 0,
+            lastPosition: { x: 0, y: 0 },
             startPosition: state.startPosition,
             region: state.region,
             imageLoaded: state.imageLoaded,
