@@ -1091,6 +1091,11 @@
       return color ? color.id : null;
     },
 
+    findClosestColorFromAllColors: (r, g, b) => {
+      const allColors = Object.values(CONFIG.COLOR_MAP).map(color => [color.rgb.r, color.rgb.g, color.rgb.b]);
+      return Utils.findClosestPaletteColor(r, g, b, allColors);
+    },
+
     isWhitePixel: (r, g, b) =>
       r >= CONFIG.WHITE_THRESHOLD && g >= CONFIG.WHITE_THRESHOLD && b >= CONFIG.WHITE_THRESHOLD,
 
@@ -4470,7 +4475,9 @@
             continue;
           }
 
-          const colorId = findExactColor([r, g, b], state.availableColors);
+          const targetRGB = Utils.findClosestColorFromAllColors(r, g, b);
+
+          const colorId = findExactColor(targetRGB, state.availableColors);
 
           // Skip pixel if color is not available
           if (colorId === undefined || colorId === null) {
