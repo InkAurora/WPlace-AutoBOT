@@ -5345,6 +5345,21 @@
 
             if (state.currentCharges >= state.cooldownChargeThreshold) {
               updateStats();
+
+              tileCache.clear()
+
+              // Fetch all tiles in parallel
+              await Promise.all([...affectedTiles].map(tileKey => {
+                const [tx, ty] = tileKey.split(",").map(Number);
+                return fetchAndCacheTile(tx, ty);
+              }));
+
+              //if the tiles could not be fetched, we should abort
+              if ([...affectedTiles].some(tileKey => !tileCache.has(tileKey))) {
+                console.warn("Some tiles could not be fetched, aborting...");
+                return;
+              }
+
               break;
             }
 
