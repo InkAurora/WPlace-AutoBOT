@@ -5360,6 +5360,9 @@
                 return;
               }
 
+              y = startRow; // Reset to start row to continue painting
+              x = startCol; // Reset to start column
+
               break;
             }
 
