@@ -5357,13 +5357,16 @@
               //if the tiles could not be fetched, we should abort
               if ([...affectedTiles].some(tileKey => !tileCache.has(tileKey))) {
                 console.warn("Some tiles could not be fetched, aborting...");
-                return;
+                state.stopFlag = true;
+                break outerLoop;
               }
 
-              y = startRow; // Reset to start row to continue painting
-              x = startCol; // Reset to start column
+              y = 0; // Reset to start row to continue painting
+              x = 0; // Reset to start column
 
               state.paintedPixels = 0;
+
+              pixelBatch = null;
 
               console.log("Threshold reached");
 
@@ -5378,8 +5381,8 @@
             await updateStats();
             await Utils.sleep(state.cooldown);
           }
-          if (state.stopFlag) break outerLoop;
 
+          if (state.stopFlag) break outerLoop;
         }
       }
 
