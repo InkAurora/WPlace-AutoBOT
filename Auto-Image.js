@@ -5185,6 +5185,14 @@
             break outerLoop
           }
 
+          let absX = startX + x;
+          let absY = startY + y;
+
+          let adderX = Math.floor(absX / 1000);
+          let adderY = Math.floor(absY / 1000);
+          let pixelX = absX % 1000;
+          let pixelY = absY % 1000;
+
           // if (state.paintedMap[y][x]) continue
           
           const idx = (y * width + x) * 4
@@ -5201,19 +5209,6 @@
 
           const colorId = findExactColor(targetRGB, state.availableColors);
 
-          // Skip pixel if color is not available
-          if (colorId === undefined || colorId === null) {
-            continue;
-          }
-
-          let absX = startX + x;
-          let absY = startY + y;
-
-          let adderX = Math.floor(absX / 1000);
-          let adderY = Math.floor(absY / 1000);
-          let pixelX = absX % 1000;
-          let pixelY = absY % 1000;
-
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
           if (canvasColor && canvasColor[3] >= CONFIG.TRANSPARENCY_THRESHOLD) {
@@ -5222,6 +5217,11 @@
               state.paintedPixels++;
               continue; // Skip painting this pixel if it already matches
             }
+          }
+
+          // Skip pixel if color is not available
+          if (colorId === undefined || colorId === null) {
+            continue;
           }
 
           if (!pixelBatch ||
@@ -5362,6 +5362,8 @@
 
               y = startRow; // Reset to start row to continue painting
               x = startCol; // Reset to start column
+
+              state.paintedPixels = 0;
 
               break;
             }
