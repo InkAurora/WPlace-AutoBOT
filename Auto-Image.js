@@ -5365,6 +5365,8 @@
 
               state.paintedPixels = 0;
 
+              console.log("Threshold reached");
+
               break;
             }
 
