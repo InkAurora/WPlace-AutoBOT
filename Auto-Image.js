@@ -5219,7 +5219,7 @@
             }
             if (!canvasColorId) {
               console.warn("Server is fucking things up");
-              break outerLoop;
+              continue; // Skip painting this pixel if the canvas color is not found
             }
           }
 
