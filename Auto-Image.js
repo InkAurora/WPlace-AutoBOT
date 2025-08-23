@@ -5217,6 +5217,10 @@
               state.paintedPixels++;
               continue; // Skip painting this pixel if it already matches
             }
+            if (!canvasColorId) {
+              console.warn("Server is fucking things up");
+              return;
+            }
           }
 
           // Skip pixel if color is not available
