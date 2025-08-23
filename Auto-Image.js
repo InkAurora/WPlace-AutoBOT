@@ -5219,7 +5219,7 @@
             }
             if (!canvasColorId) {
               console.warn("Server is fucking things up");
-              return;
+              break outerLoop;
             }
           }
 
