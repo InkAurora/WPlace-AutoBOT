@@ -2175,7 +2175,7 @@
 
       // if the items of the palette array are of object type, convert them to arrays
       if (palette.every(c => typeof c === "object")) {
-        palette = palette.filter(color => color.rgb !== null).map(c => [c.r, c.g, c.b]);
+        palette = palette.filter(color => color.id !== null).map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
       }
 
       if (state.colorMatchingAlgorithm === 'legacy') {
