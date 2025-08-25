@@ -2613,7 +2613,7 @@
         const availableColors = Utils.extractAvailableColors();
         if (availableColors.length < 10) {
           updateUI("noColorsFound", "error");
-          Utils.showAlert(Utils.t("noColorsFound"), "error");
+          setTimeout(() => Utils.showAlert(Utils.t("noColorsFound"), "error"), 0);
           return false;
         }
 
