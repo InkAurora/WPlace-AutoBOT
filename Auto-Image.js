@@ -1073,28 +1073,28 @@
     initialSetupComplete: false, // Track if initial startup setup is complete (only happens once)
     overlayOpacity: CONFIG.OVERLAY.OPACITY_DEFAULT,
     blueMarbleEnabled: CONFIG.OVERLAY.BLUE_MARBLE_DEFAULT,
-  ditheringEnabled: true,
-  // Advanced color matching settings
-  colorMatchingAlgorithm: 'lab',
-  enableChromaPenalty: true,
-  chromaPenaltyWeight: 0.15,
-  customTransparencyThreshold: CONFIG.TRANSPARENCY_THRESHOLD,
-  customWhiteThreshold: CONFIG.WHITE_THRESHOLD,
-  resizeSettings: null,
-  originalImage: null,
-  resizeIgnoreMask: null,
-  // Notification prefs and runtime bookkeeping
-  notificationsEnabled: CONFIG.NOTIFICATIONS.ENABLED,
-  notifyOnChargesReached: CONFIG.NOTIFICATIONS.ON_CHARGES_REACHED,
-  notifyOnlyWhenUnfocused: CONFIG.NOTIFICATIONS.ONLY_WHEN_UNFOCUSED,
-  notificationIntervalMinutes: CONFIG.NOTIFICATIONS.REPEAT_MINUTES,
-  _lastChargesNotifyAt: 0,
-  _lastChargesBelow: true,
-  // Smart save tracking
-  _lastSavePixelCount: 0,
-  _lastSaveTime: 0,
-  _saveInProgress: false,
-  paintedMap: null,
+    ditheringEnabled: true,
+    // Advanced color matching settings
+    colorMatchingAlgorithm: 'lab',
+    enableChromaPenalty: true,
+    chromaPenaltyWeight: 0.15,
+    customTransparencyThreshold: CONFIG.TRANSPARENCY_THRESHOLD,
+    customWhiteThreshold: CONFIG.WHITE_THRESHOLD,
+    resizeSettings: null,
+    originalImage: null,
+    resizeIgnoreMask: null,
+    // Notification prefs and runtime bookkeeping
+    notificationsEnabled: CONFIG.NOTIFICATIONS.ENABLED,
+    notifyOnChargesReached: CONFIG.NOTIFICATIONS.ON_CHARGES_REACHED,
+    notifyOnlyWhenUnfocused: CONFIG.NOTIFICATIONS.ONLY_WHEN_UNFOCUSED,
+    notificationIntervalMinutes: CONFIG.NOTIFICATIONS.REPEAT_MINUTES,
+    _lastChargesNotifyAt: 0,
+    _lastChargesBelow: true,
+    // Smart save tracking
+    _lastSavePixelCount: 0,
+    _lastSaveTime: 0,
+    _saveInProgress: false,
+    paintedMap: null,
   }
 
   let _updateResizePreview = () => { };
@@ -1127,8 +1127,8 @@
       this.disable();
       this.imageBitmap = null;
       this.chunkedTiles.clear();
-  this.originalTiles.clear();
-  this.originalTilesData.clear();
+      this.originalTiles.clear();
+      this.originalTilesData.clear();
       this.lastProcessedHash = null;
       if (this.processPromise) {
         this.processPromise = null;
@@ -2754,16 +2754,15 @@
         // Set up overlay with restored data
         await overlayManager.setImage(imageBitmap);
         await overlayManager.setPosition(state.startPosition, state.region);
-        overlayManager.enable();
+        overlayManager.disable(); 
 
         // Update overlay button state
         const toggleOverlayBtn = document.getElementById('toggleOverlayBtn');
         if (toggleOverlayBtn) {
-          toggleOverlayBtn.disabled = false;
-          toggleOverlayBtn.classList.add('active');
+          toggleOverlayBtn.disabled = true;
+          toggleOverlayBtn.classList.remove('active');
         }
 
-        console.log('Overlay restored from data');
         return true;
       } catch (error) {
         console.error('Failed to restore overlay from data:', error);
@@ -5762,9 +5761,9 @@
 
     if (toggleOverlayBtn) {
       toggleOverlayBtn.addEventListener('click', () => {
-  const isEnabled = overlayManager.toggle();
-  toggleOverlayBtn.classList.toggle('active', isEnabled);
-  toggleOverlayBtn.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
+        const isEnabled = overlayManager.toggle();
+        toggleOverlayBtn.classList.toggle('active', isEnabled);
+        toggleOverlayBtn.setAttribute('aria-pressed', isEnabled ? 'true' : 'false');
         Utils.showAlert(`Overlay ${isEnabled ? 'enabled' : 'disabled'}.`, 'info');
       });
     }
@@ -7596,19 +7595,19 @@
         minimized: state.minimized,
         overlayOpacity: state.overlayOpacity,
         blueMarbleEnabled: document.getElementById('enableBlueMarbleToggle')?.checked,
-  ditheringEnabled: state.ditheringEnabled,
-  colorMatchingAlgorithm: state.colorMatchingAlgorithm,
-  enableChromaPenalty: state.enableChromaPenalty,
-  chromaPenaltyWeight: state.chromaPenaltyWeight,
-  customTransparencyThreshold: state.customTransparencyThreshold,
-  customWhiteThreshold: state.customWhiteThreshold,
-  paintWhitePixels: state.paintWhitePixels,
-  resizeSettings: state.resizeSettings,
-  originalImage: state.originalImage,
-  // Save ignore mask (as base64) with its dimensions
-  resizeIgnoreMask: (state.resizeIgnoreMask && state.resizeSettings && state.resizeSettings.width * state.resizeSettings.height === state.resizeIgnoreMask.length)
-    ? { w: state.resizeSettings.width, h: state.resizeSettings.height, data: btoa(String.fromCharCode(...state.resizeIgnoreMask)) }
-    : null,
+        ditheringEnabled: state.ditheringEnabled,
+        colorMatchingAlgorithm: state.colorMatchingAlgorithm,
+        enableChromaPenalty: state.enableChromaPenalty,
+        chromaPenaltyWeight: state.chromaPenaltyWeight,
+        customTransparencyThreshold: state.customTransparencyThreshold,
+        customWhiteThreshold: state.customWhiteThreshold,
+        paintWhitePixels: state.paintWhitePixels,
+        resizeSettings: state.resizeSettings,
+        originalImage: state.originalImage,
+        // Save ignore mask (as base64) with its dimensions
+        resizeIgnoreMask: (state.resizeIgnoreMask && state.resizeSettings && state.resizeSettings.width * state.resizeSettings.height === state.resizeIgnoreMask.length)
+          ? { w: state.resizeSettings.width, h: state.resizeSettings.height, data: btoa(String.fromCharCode(...state.resizeIgnoreMask)) }
+          : null,
         // Notifications
         notificationsEnabled: state.notificationsEnabled,
         notifyOnChargesReached: state.notifyOnChargesReached,
@@ -7641,15 +7640,15 @@
       CONFIG.AUTO_CAPTCHA_ENABLED = settings.autoCaptchaEnabled ?? false;
       state.overlayOpacity = settings.overlayOpacity ?? CONFIG.OVERLAY.OPACITY_DEFAULT;
       state.blueMarbleEnabled = settings.blueMarbleEnabled ?? CONFIG.OVERLAY.BLUE_MARBLE_DEFAULT;
-  state.ditheringEnabled = settings.ditheringEnabled ?? false;
-  state.colorMatchingAlgorithm = settings.colorMatchingAlgorithm || 'lab';
-  state.enableChromaPenalty = settings.enableChromaPenalty ?? true;
-  state.chromaPenaltyWeight = settings.chromaPenaltyWeight ?? 0.15;
-  state.customTransparencyThreshold = settings.customTransparencyThreshold ?? CONFIG.TRANSPARENCY_THRESHOLD;
-  state.customWhiteThreshold = settings.customWhiteThreshold ?? CONFIG.WHITE_THRESHOLD;
-  state.paintWhitePixels = settings.paintWhitePixels ?? true;
-  state.resizeSettings = settings.resizeSettings ?? null;
-  state.originalImage = settings.originalImage ?? null;
+      state.ditheringEnabled = settings.ditheringEnabled ?? false;
+      state.colorMatchingAlgorithm = settings.colorMatchingAlgorithm || 'lab';
+      state.enableChromaPenalty = settings.enableChromaPenalty ?? true;
+      state.chromaPenaltyWeight = settings.chromaPenaltyWeight ?? 0.15;
+      state.customTransparencyThreshold = settings.customTransparencyThreshold ?? CONFIG.TRANSPARENCY_THRESHOLD;
+      state.customWhiteThreshold = settings.customWhiteThreshold ?? CONFIG.WHITE_THRESHOLD;
+      state.paintWhitePixels = settings.paintWhitePixels ?? true;
+      state.resizeSettings = settings.resizeSettings ?? null;
+      state.originalImage = settings.originalImage ?? null;
       // Notifications
       state.notificationsEnabled = settings.notificationsEnabled ?? CONFIG.NOTIFICATIONS.ENABLED;
       state.notifyOnChargesReached = settings.notifyOnChargesReached ?? CONFIG.NOTIFICATIONS.ON_CHARGES_REACHED;
@@ -7716,17 +7715,17 @@
       const tokenSourceSelect = document.getElementById('tokenSourceSelect');
       if (tokenSourceSelect) tokenSourceSelect.value = state.tokenSource;
   
-  const colorAlgorithmSelect = document.getElementById('colorAlgorithmSelect');
-  if (colorAlgorithmSelect) colorAlgorithmSelect.value = state.colorMatchingAlgorithm;
-  const enableChromaPenaltyToggle = document.getElementById('enableChromaPenaltyToggle');
-  if (enableChromaPenaltyToggle) enableChromaPenaltyToggle.checked = state.enableChromaPenalty;
-  const chromaPenaltyWeightSlider = document.getElementById('chromaPenaltyWeightSlider');
-  if (chromaPenaltyWeightSlider) chromaPenaltyWeightSlider.value = state.chromaPenaltyWeight;
-  const chromaWeightValue = document.getElementById('chromaWeightValue');
-  if (chromaWeightValue) chromaWeightValue.textContent = state.chromaPenaltyWeight;
-  const transparencyThresholdInput = document.getElementById('transparencyThresholdInput');
-  if (transparencyThresholdInput) transparencyThresholdInput.value = state.customTransparencyThreshold;
-  const whiteThresholdInput = document.getElementById('whiteThresholdInput');
+      const colorAlgorithmSelect = document.getElementById('colorAlgorithmSelect');
+      if (colorAlgorithmSelect) colorAlgorithmSelect.value = state.colorMatchingAlgorithm;
+      const enableChromaPenaltyToggle = document.getElementById('enableChromaPenaltyToggle');
+      if (enableChromaPenaltyToggle) enableChromaPenaltyToggle.checked = state.enableChromaPenalty;
+      const chromaPenaltyWeightSlider = document.getElementById('chromaPenaltyWeightSlider');
+      if (chromaPenaltyWeightSlider) chromaPenaltyWeightSlider.value = state.chromaPenaltyWeight;
+      const chromaWeightValue = document.getElementById('chromaWeightValue');
+      if (chromaWeightValue) chromaWeightValue.textContent = state.chromaPenaltyWeight;
+      const transparencyThresholdInput = document.getElementById('transparencyThresholdInput');
+      if (transparencyThresholdInput) transparencyThresholdInput.value = state.customTransparencyThreshold;
+      const whiteThresholdInput = document.getElementById('whiteThresholdInput');
       if (whiteThresholdInput) whiteThresholdInput.value = state.customWhiteThreshold;
       // Notifications UI
       const notifEnabledToggle = document.getElementById('notifEnabledToggle');
