@@ -2608,6 +2608,14 @@
 
     restoreProgress: (savedData) => {
       try {
+        // Check for available colors first
+        const availableColors = Utils.extractAvailableColors();
+        if (availableColors.length < 10) {
+          updateUI("noColorsFound", "error");
+          Utils.showAlert(Utils.t("noColorsFound"), "error");
+          return false;
+        }
+
         Object.assign(state, savedData.state)
 
         if (savedData.imageData) {
@@ -2640,6 +2648,11 @@
         } else if (savedData.paintedMap) {
           state.paintedMap = savedData.paintedMap.map((row) => Array.from(row))
         }
+
+        // Update state with current available colors
+        state.availableColors = availableColors;
+        state.colorsChecked = true;
+        console.log("Using current available colors from palette.");
 
         return true
       } catch (error) {
