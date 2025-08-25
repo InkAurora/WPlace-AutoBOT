@@ -2171,6 +2171,9 @@
           .filter(c => c.rgb)
             .map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
       }
+      if (typeof palette[0] === "object") {
+        palette = Object.values(palette).map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
+      }
       if (state.colorMatchingAlgorithm === 'legacy') {
         let menorDist = Infinity;
         let cor = [0, 0, 0];
