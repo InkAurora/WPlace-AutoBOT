@@ -2174,7 +2174,7 @@
       }
 
       // if the items of the palette array are of object type, convert them to arrays
-      if (palette.every(c => typeof c === "object")) {
+      if (palette.every(c => Object.prototype.toString.call(c) === '[object Object]')) {
         palette = palette.filter(color => color.id !== null).map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
       }
 
