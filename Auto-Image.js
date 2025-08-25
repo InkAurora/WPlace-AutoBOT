@@ -21,7 +21,7 @@
     COOLDOWN_CHARGE_THRESHOLD: 1, // Default wait threshold
     // Desktop Notifications (defaults)
     NOTIFICATIONS: {
-        ENABLED: true,
+        ENABLED: false,
         ON_CHARGES_REACHED: true,
         ONLY_WHEN_UNFOCUSED: true,
         REPEAT_MINUTES: 5, // repeat reminder while threshold condition holds
@@ -2216,6 +2216,13 @@
       return best || [0, 0, 0];
     },
 
+    findColorId: (r, g, b) => {
+      const color = Object.values(CONFIG.COLOR_MAP).filter(color => color.rgb !== null).find(color =>
+        color.rgb.r === r && color.rgb.g === g && color.rgb.b === b
+      );
+      return color ? color.id : null;
+    },
+
     isWhitePixel: (r, g, b) => {
       const wt = state.customWhiteThreshold || CONFIG.WHITE_THRESHOLD;
       return r >= wt && g >= wt && b >= wt;
@@ -3009,6 +3016,14 @@
     colorCache.set(cacheKey, bestId)
     if (colorCache.size > 15000) { const firstKey = colorCache.keys().next().value; colorCache.delete(firstKey) }
     return bestId
+  }
+
+  function findExactColor(targetRgb, availableColors) {
+    return availableColors.find(c =>
+      c.rgb[0] === targetRgb[0] &&
+      c.rgb[1] === targetRgb[1] &&
+      c.rgb[2] === targetRgb[2]
+    )?.id || null
   }
 
   // UI UPDATE FUNCTIONS (declared early to avoid reference errors)
@@ -7051,40 +7066,77 @@
     NotificationManager.syncFromState();
   }
 
+  // Utility to get the color of a pixel from the canvas
+  // --- Tile caching system ---
+  const tileCache = new Map(); // key: `${regionX},${regionY}` value: ImageData
+
+  async function fetchAndCacheTile(regionX, regionY) {
+    const tileKey = `${regionX},${regionY}`;
+    if (tileCache.has(tileKey)) return tileCache.get(tileKey);
+    try {
+      const tileUrl = `https://backend.wplace.live/files/s0/tiles/${regionX}/${regionY}.png`;
+      const res = await fetch(tileUrl);
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      const bitmap = await createImageBitmap(blob);
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(bitmap, 0, 0);
+      const imgData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+      tileCache.set(tileKey, imgData);
+      return imgData;
+    } catch (e) {
+      console.error("Failed to fetch/cache tile:", e);
+      return null;
+    }
+  }
+
+  function getCachedPixelColor(regionX, regionY, pixelX, pixelY) {
+    const tileKey = `${regionX},${regionY}`;
+    const imgData = tileCache.get(tileKey);
+    if (!imgData) return null;
+    const idx = (pixelY * imgData.width + pixelX) * 4;
+    const data = imgData.data;
+    return [data[idx], data[idx + 1], data[idx + 2], data[idx + 3]];
+  }
+
   async function processImage() {
     const { width, height, pixels } = state.imageData
     const { x: startX, y: startY } = state.startPosition
     const { x: regionX, y: regionY } = state.region
 
     const tThresh2 = state.customTransparencyThreshold || CONFIG.TRANSPARENCY_THRESHOLD;
-    const isEligibleAt = (x, y) => {
-      const idx = (y * width + x) * 4;
-      const r = pixels[idx], g = pixels[idx + 1], b = pixels[idx + 2], a = pixels[idx + 3];
-      if (a < tThresh2) return false;
-      if (!state.paintWhitePixels && Utils.isWhitePixel(r, g, b)) return false;
-      return true;
-    };
-
-    let startRow = 0;
-    let startCol = 0;
-    let foundStart = false;
-    let seen = 0;
-    const target = Math.max(0, Math.min(state.paintedPixels || 0, width * height));
-    for (let y = 0; y < height && !foundStart; y++) {
-      for (let x = 0; x < width; x++) {
-        if (!isEligibleAt(x, y)) continue;
-        if (seen === target) { startRow = y; startCol = x; foundStart = true; break; }
-        seen++;
-      }
-    }
-    if (!foundStart) { startRow = height; startCol = 0; }
 
     let pixelBatch = null;
     let skippedPixels = { transparent: 0, white: 0, alreadyPainted: 0 };
 
     try {
-      outerLoop: for (let y = startRow; y < height; y++) {
+      // Pre-cache all affected tiles
+      const affectedTiles = new Set();
+      for (let y = startRow; y < height; y++) {
         for (let x = y === startRow ? startCol : 0; x < width; x++) {
+          let absX = startX + x;
+          let absY = startY + y;
+          let adderX = Math.floor(absX / 1000);
+          let adderY = Math.floor(absY / 1000);
+          affectedTiles.add(`${regionX + adderX},${regionY + adderY}`);
+        }
+      }
+      
+      // Fetch all tiles in parallel
+      await Promise.all([...affectedTiles].map(tileKey => {
+        const [tx, ty] = tileKey.split(",").map(Number);
+        return fetchAndCacheTile(tx, ty);
+      }));
+
+      //if the tiles could not be fetched, we should abort
+      if ([...affectedTiles].some(tileKey => !tileCache.has(tileKey))) {
+        console.warn("Some tiles could not be fetched, aborting...");
+        return;
+      }
+
+      outerLoop: for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
           if (state.stopFlag) {
             if (pixelBatch && pixelBatch.pixels.length > 0) {
               console.log(`🎯 Sending final batch before stop with ${pixelBatch.pixels.length} pixels`);
@@ -7121,10 +7173,10 @@
           if (Utils.isWhitePixel(r, g, b)) {
             targetRgb = [255, 255, 255];
           } else {
-            targetRgb = Utils.findClosestPaletteColor(r, g, b, state.activeColorPalette);
+            targetRgb = Utils.findClosestPaletteColor(r, g, b, state.availableColors);
           }
 
-          const colorId = findClosestColor([r, g, b], state.availableColors);
+          const colorId = findExactColor(targetRgb, state.activeColorPalette);
 
           let absX = startX + x;
           let absY = startY + y;
@@ -7133,6 +7185,25 @@
           let adderY = Math.floor(absY / 1000);
           let pixelX = absX % 1000;
           let pixelY = absY % 1000;
+
+          // Check if pixel already matches desired color using cached tile data
+          const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
+          if (canvasColor && canvasColor[3] >= CONFIG.TRANSPARENCY_THRESHOLD) { // Only consider non-transparent pixels
+            const canvasColorId = Utils.findColorId(Utils.findClosestPaletteColor(canvasColor[0], canvasColor[1], canvasColor[2]));
+            if (canvasColorId === colorId) {
+              state.paintedPixels++;
+              continue; // Skip painting this pixel if it already matches
+            }
+            // if (!canvasColorId) {
+            //   console.warn("Server is fucking things up");
+            //   continue; // Skip painting this pixel if the canvas color is not found
+            // }
+          }
+
+          // Skip pixel if color is not available
+          if (colorId === undefined || colorId === null) {
+            continue;
+          }
 
           if (!pixelBatch ||
             pixelBatch.regionX !== regionX + adderX ||
@@ -7177,26 +7248,6 @@
               regionY: regionY + adderY,
               pixels: []
             };
-          }
-
-          
-          try {
-            const tileRegionX = pixelBatch ? (pixelBatch.regionX) : (regionX + adderX);
-            const tileRegionY = pixelBatch ? (pixelBatch.regionY) : (regionY + adderY);
-            const tileKeyParts = [(regionX + adderX), (regionY + adderY)];
-            const existingColorRGBA = await overlayManager.getTilePixelColor(tileKeyParts[0], tileKeyParts[1], pixelX, pixelY).catch(() => null);
-            if (existingColorRGBA && Array.isArray(existingColorRGBA)) {
-              const [er, eg, eb] = existingColorRGBA;
-              const existingColorId = findClosestColor([er, eg, eb], state.availableColors);
-              // console.log(`pixel at (${pixelX}, ${pixelY}) has color ${existingColorId} it should be ${colorId}`);
-              if (existingColorId === colorId) {
-                skippedPixels.alreadyPainted++;
-                console.log(`Skipped already painted pixel at (${pixelX}, ${pixelY})`);
-                continue; // Skip
-              }
-            }
-          } catch (e) {
-            /* ignore */
           }
 
           pixelBatch.pixels.push({
@@ -7255,6 +7306,29 @@
               // Edge-trigger a notification the instant threshold is crossed
               NotificationManager.maybeNotifyChargesReached(true);
               updateStats();
+
+              tileCache.clear()
+
+              // Fetch all tiles in parallel
+              await Promise.all([...affectedTiles].map(tileKey => {
+                const [tx, ty] = tileKey.split(",").map(Number);
+                return fetchAndCacheTile(tx, ty);
+              }));
+
+              //if the tiles could not be fetched, we should abort
+              if ([...affectedTiles].some(tileKey => !tileCache.has(tileKey))) {
+                console.warn("Some tiles could not be fetched, aborting...");
+                state.stopFlag = true;
+                break outerLoop;
+              }
+
+              y = 0; // Reset to start row to continue painting
+              x = 0; // Reset to start column
+
+              state.paintedPixels = 0;
+
+              pixelBatch = null;
+              
               break;
             }
 
