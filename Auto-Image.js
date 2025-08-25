@@ -7105,10 +7105,10 @@
     const { x: startX, y: startY } = state.startPosition
     const { x: regionX, y: regionY } = state.region
 
-    const tThresh2 = state.customTransparencyThreshold || CONFIG.TRANSPARENCY_THRESHOLD;
-
     let pixelBatch = null;
     let skippedPixels = { transparent: 0, white: 0, alreadyPainted: 0 };
+
+    state.paintedPixels = 0;
 
     try {
       // Pre-cache all affected tiles
