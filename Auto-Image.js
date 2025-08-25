@@ -7208,8 +7208,9 @@
 
           // Check if pixel already matches desired color using cached tile data
           const canvasColor = getCachedPixelColor(regionX + adderX, regionY + adderY, pixelX, pixelY);
+          let canvasColorId = 0;
           if (canvasColor && canvasColor[3] >= CONFIG.TRANSPARENCY_THRESHOLD) { // Only consider non-transparent pixels
-            const canvasColorId = Utils.findColorId(...Utils.findClosestPaletteColor(canvasColor[0], canvasColor[1], canvasColor[2]));
+            canvasColorId = Utils.findColorId(...Utils.findClosestPaletteColor(canvasColor[0], canvasColor[1], canvasColor[2]));
             if (canvasColorId === colorId) {
               state.paintedPixels++;
               continue; // Skip painting this pixel if it already matches
