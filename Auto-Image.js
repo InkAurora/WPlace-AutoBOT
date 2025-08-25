@@ -7113,8 +7113,8 @@
     try {
       // Pre-cache all affected tiles
       const affectedTiles = new Set();
-      for (let y = startRow; y < height; y++) {
-        for (let x = y === startRow ? startCol : 0; x < width; x++) {
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
           let absX = startX + x;
           let absY = startY + y;
           let adderX = Math.floor(absX / 1000);
