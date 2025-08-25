@@ -8534,6 +8534,9 @@
 
       tileCache.clear();
 
+      const overlayState = overlayManager.isEnabled;
+      overlayManager.disable();
+
       // Fetch all tiles in parallel
       await Promise.all(
         [...affectedTiles].map((tileKey) => {
@@ -8541,6 +8544,10 @@
           return fetchAndCacheTile(tx, ty);
         })
       );
+
+      if (overlayState) {
+        overlayManager.enable();
+      }
 
       //if the tiles could not be fetched, we should abort
       if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
@@ -8808,6 +8815,8 @@
 
               tileCache.clear();
 
+              overlayManager.disable();
+
               // Fetch all tiles in parallel
               await Promise.all(
                 [...affectedTiles].map((tileKey) => {
@@ -8815,6 +8824,10 @@
                   return fetchAndCacheTile(tx, ty);
                 })
               );
+
+              if (overlayState) {
+                overlayManager.enable();
+              }
 
               //if the tiles could not be fetched, we should abort
               if (
