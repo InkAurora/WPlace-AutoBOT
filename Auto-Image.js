@@ -1048,6 +1048,7 @@
     totalPixels: 0,
     paintedPixels: 0,
     availableColors: [],
+    availableColorPalette: [],
     activeColorPalette: [], // User-selected colors for conversion
     paintWhitePixels: true, // Default to ON
     currentCharges: 0,
@@ -2650,7 +2651,7 @@
         }
 
         // Update state with current available colors
-        state.availableColors = availableColors;
+        state.availableColorPalette = availableColors;
         state.colorsChecked = true;
         console.log("Using current available colors from palette.");
 
@@ -7195,7 +7196,7 @@
             targetRgb = Utils.findClosestPaletteColor(r, g, b, state.availableColors);
           }
 
-          const colorId = findExactColor(targetRgb, state.activeColorPalette);
+          const colorId = findExactColor(targetRgb, state.availableColorPalette);
 
           let absX = startX + x;
           let absY = startY + y;
