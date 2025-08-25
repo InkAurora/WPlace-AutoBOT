@@ -2873,6 +2873,7 @@
             imageLoaded: state.imageLoaded,
             colorsChecked: state.colorsChecked,
             availableColors: state.availableColors,
+            colorMatchingAlgorithm: state.colorMatchingAlgorithm,
           },
           imageData: state.imageData
             ? {
@@ -3041,6 +3042,7 @@
             imageLoaded: state.imageLoaded,
             colorsChecked: state.colorsChecked,
             availableColors: state.availableColors,
+            colorMatchingAlgorithm: state.colorMatchingAlgorithm,
           },
           imageData: state.imageData
             ? {
