@@ -2171,9 +2171,12 @@
           .filter(c => c.rgb)
             .map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
       }
-      if (typeof palette[0] === "object") {
-        palette = Object.values(palette).map(c => [c.rgb.r, c.rgb.g, c.rgb.b]);
+
+      // if the items of the palette array are of object type, convert them to arrays
+      if (palette.every(c => typeof c === "object")) {
+        palette = palette.filter(color => color.rgb !== null).map(c => [c.r, c.g, c.b]);
       }
+
       if (state.colorMatchingAlgorithm === 'legacy') {
         let menorDist = Infinity;
         let cor = [0, 0, 0];
