@@ -3127,7 +3127,7 @@
         // Update overlay button state
         const toggleOverlayBtn = document.getElementById("toggleOverlayBtn");
         if (toggleOverlayBtn) {
-          toggleOverlayBtn.disabled = true;
+          toggleOverlayBtn.disabled = false;
           toggleOverlayBtn.classList.remove("active");
         }
 
