@@ -7142,6 +7142,8 @@
           affectedTiles.add(`${regionX + adderX},${regionY + adderY}`);
         }
       }
+
+      tileCache.clear()
       
       // Fetch all tiles in parallel
       await Promise.all([...affectedTiles].map(tileKey => {
