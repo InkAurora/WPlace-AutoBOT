@@ -8192,7 +8192,7 @@
           return;
         }
 
-        state.activeColorPalette = availableColors;
+        state.availableColorPalette = availableColors;
 
         if (!state.colorsChecked) {
           state.availableColors = availableColors;
