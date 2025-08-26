@@ -8192,9 +8192,10 @@
           return;
         }
 
+        state.activeColorPalette = availableColors;
+
         if (!state.colorsChecked) {
           state.availableColors = availableColors;
-          state.activeColorPalette = availableColors;
           state.colorsChecked = true;
           updateUI("colorsFound", "success", { count: availableColors.length });
           updateStats();
