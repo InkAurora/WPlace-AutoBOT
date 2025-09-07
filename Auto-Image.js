@@ -9542,17 +9542,11 @@
       });
 
       const results = await Promise.all(searchPromises);
-      let matchingUrl = results.find((url) => url !== null);
+      const matchingUrl = results.find((url) => url !== null);
 
       if (!matchingUrl) {
         throw new Error(`No module contains the string "${searchString}".`);
       }
-
-      // Remove leading '.' and '_'
-      if (matchingUrl.startsWith("./")) {
-        matchingUrl = matchingUrl.slice(2);
-      }
-      matchingUrl = matchingUrl.replace(/^_app\//, "/app/");
 
       const mod = await import(matchingUrl);
       console.log(`✅ Loaded module from ${matchingUrl}`);
