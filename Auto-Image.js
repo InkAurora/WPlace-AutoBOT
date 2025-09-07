@@ -9502,10 +9502,53 @@
   // Load theme preference immediately on startup before creating UI
   loadThemePreference();
 
+  async function findPawtectModule() {
+    // Step 1: Find all script tags under the known path
+    const scripts = document.querySelectorAll(
+      'script[src*="/_app/immutable/chunks/"]'
+    );
+    let targetModule = null;
+
+    // Step 2: Iterate through scripts and attempt to load each one
+    for (const script of scripts) {
+      const moduleUrl = script.src;
+      try {
+        // Dynamically import the module
+        const mod = await import(moduleUrl);
+
+        // Check if the module exports get_pawtected_endpoint_payload
+        if (mod && typeof mod.get_pawtected_endpoint_payload === "function") {
+          targetModule = mod;
+          console.log(
+            "Found module with get_pawtected_endpoint_payload:",
+            moduleUrl
+          );
+          break; // Stop once we find the correct module
+        }
+      } catch (error) {
+        console.warn(`Failed to load module ${moduleUrl}:`, error);
+        continue; // Continue checking other scripts
+      }
+    }
+
+    // Step 3: Use the module or handle the case where it’s not found
+    if (targetModule) {
+      return targetModule;
+    } else {
+      console.error("No module found with get_pawtected_endpoint_payload");
+      return null;
+    }
+  }
+
   async function createWasmToken(regionX, regionY, payload) {
     try {
       // Load the Pawtect module and WASM
-      const mod = await import("/_app/immutable/chunks/BBb1ALhY.js");
+      const mod = await findPawtectModule();
+      if (!mod) {
+        console.error("❌ Pawtect module not found");
+        return null;
+      }
+
       let wasm;
       try {
         wasm = await mod._();
