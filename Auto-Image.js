@@ -9544,7 +9544,13 @@
       });
 
       const results = await Promise.all(searchPromises);
-      const matchingUrl = results.find((url) => url !== null);
+      let matchingUrl = results.find((url) => url !== null);
+
+      // Remove leading '.' and '_'
+      if (matchingUrl.startsWith("./")) {
+        matchingUrl = matchingUrl.slice(2);
+      }
+      matchingUrl = matchingUrl.replace(/^_app\//, "/app/");
 
       if (!matchingUrl) {
         throw new Error(`No module contains the string "${searchString}".`);
