@@ -9504,7 +9504,6 @@
 
   async function findAndLoadModule(searchString) {
     try {
-      // Step 1: Find all <link rel="modulepreload"> tags
       const preloadLinks = document.querySelectorAll(
         'link[rel="modulepreload"][href*="/_app/immutable/chunks/"]'
       );
@@ -9524,7 +9523,6 @@
         url.startsWith(".") ? url.slice(1) : url
       );
 
-      // Step 2: Search each file for the string
       const searchPromises = formattedUrls.map(async (url) => {
         try {
           const response = await fetch(`https://wplace.live${url}`);
@@ -9546,17 +9544,16 @@
       const results = await Promise.all(searchPromises);
       let matchingUrl = results.find((url) => url !== null);
 
+      if (!matchingUrl) {
+        throw new Error(`No module contains the string "${searchString}".`);
+      }
+
       // Remove leading '.' and '_'
       if (matchingUrl.startsWith("./")) {
         matchingUrl = matchingUrl.slice(2);
       }
       matchingUrl = matchingUrl.replace(/^_app\//, "/app/");
 
-      if (!matchingUrl) {
-        throw new Error(`No module contains the string "${searchString}".`);
-      }
-
-      // Step 3: Dynamically import the matching module
       const mod = await import(matchingUrl);
       console.log(`✅ Loaded module from ${matchingUrl}`);
       return mod;
