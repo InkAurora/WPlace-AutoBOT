@@ -3219,12 +3219,17 @@
           coords: [pixelX, pixelY],
           colors: [color],
           t: turnstileToken,
+          fp: fpStr32,
         };
+        var token = await createWasmToken(regionX, regionY, payload);
         const res = await fetch(
           `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`,
           {
             method: "POST",
-            headers: { "Content-Type": "text/plain;charset=UTF-8" },
+            headers: {
+              "Content-Type": "text/plain;charset=UTF-8",
+              "x-pawtect-token": token,
+            },
             credentials: "include",
             body: JSON.stringify(payload),
           }
@@ -4668,7 +4673,7 @@
         color: ${theme.primary};
         border-color: ${theme.text};
         box-shadow: 0 0 8px rgba(0,0,0,0.25) inset, 0 0 6px rgba(0,0,0,0.2);
-      }
+    }
 
       .resize-controls {
         display: grid;
@@ -5011,7 +5016,7 @@
       .wplace-setting-title i {
         margin-right: 8px;
         color: ${theme.highlight};
-      }
+    }
 
       .wplace-setting-content {
         color: ${theme.text};
@@ -5302,9 +5307,9 @@
             <div class="wplace-cooldown-control">
                 <label id="cooldownLabel">${Utils.t("waitCharges")}:</label>
                 <div class="wplace-slider-container">
-                    <input type="range" id="cooldownSlider" class="wplace-slider" min="1" max="1" value="${
-                      state.cooldownChargeThreshold
-                    }">
+                        <input type="range" id="cooldownSlider" class="wplace-slider" min="1" max="1" value="${
+                          state.cooldownChargeThreshold
+                        }">
                     <span id="cooldownValue" style="font-weight:bold; min-width: 20px; text-align: center;">${
                       state.cooldownChargeThreshold
                     }</span>
@@ -5652,7 +5657,7 @@
                     height: 20px;
                     accent-color: ${theme.highlight || "#48dbfb"};
                   "/>
-              </label>
+            </label>
           </div>
         </div>
 
@@ -5688,9 +5693,9 @@
           <!-- Normal Mode: Fixed Size Slider -->
           <div id="normalBatchControls" style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 18px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-              <input type="range" id="speedSlider" min="${
-                CONFIG.PAINTING_SPEED.MIN
-              }" max="${CONFIG.PAINTING_SPEED.MAX}" value="${
+                  <input type="range" id="speedSlider" min="${
+                    CONFIG.PAINTING_SPEED.MIN
+                  }" max="${CONFIG.PAINTING_SPEED.MAX}" value="${
       CONFIG.PAINTING_SPEED.DEFAULT
     }"
                 style="
@@ -5714,7 +5719,7 @@
                 box-shadow: 0 3px 10px rgba(79, 172, 254, 0.3);
                 border: 1px solid rgba(255,255,255,0.2);
               ">${CONFIG.PAINTING_SPEED.DEFAULT} (batch size)</div>
-            </div>
+                </div>
             <div style="display: flex; justify-content: space-between; color: rgba(255,255,255,0.7); font-size: 11px; margin-top: 8px;">
               <span><i class="fas fa-turtle"></i> ${
                 CONFIG.PAINTING_SPEED.MIN
@@ -5778,7 +5783,7 @@
             <span>Enable painting speed limit (batch size control)</span>
           </label>
         </div>
-
+        
         <!-- Notifications Section -->
         <div style="margin-bottom: 25px;">
           <label style="display: block; margin-bottom: 12px; color: white; font-weight: 500; font-size: 16px; display: flex; align-items: center; gap: 8px;">
@@ -5915,7 +5920,7 @@
                 ${CONFIG.CSS_CLASSES.BUTTON_PRIMARY}
              ">
                  <i class="fas fa-check"></i> ${Utils.t("applySettings")}
-             </button>
+          </button>
         </div>
 
       </div>
@@ -6938,29 +6943,29 @@
         progressBar.style.width = `${progress}%`;
 
         imageStatsHTML = `
-                <div class="wplace-stat-item">
-                <div class="wplace-stat-label"><i class="fas fa-image"></i> ${Utils.t(
-                  "progress"
-                )}</div>
-                <div class="wplace-stat-value">${progress}%</div>
-                </div>
-                <div class="wplace-stat-item">
-                <div class="wplace-stat-label"><i class="fas fa-paint-brush"></i> ${Utils.t(
-                  "pixels"
-                )}</div>
-                <div class="wplace-stat-value">${state.paintedPixels}/${
+          <div class="wplace-stat-item">
+            <div class="wplace-stat-label"><i class="fas fa-image"></i> ${Utils.t(
+              "progress"
+            )}</div>
+            <div class="wplace-stat-value">${progress}%</div>
+          </div>
+          <div class="wplace-stat-item">
+            <div class="wplace-stat-label"><i class="fas fa-paint-brush"></i> ${Utils.t(
+              "pixels"
+            )}</div>
+            <div class="wplace-stat-value">${state.paintedPixels}/${
           state.totalPixels
         }</div>
-                </div>
-                <div class="wplace-stat-item">
-                <div class="wplace-stat-label"><i class="fas fa-clock"></i> ${Utils.t(
-                  "estimatedTime"
-                )}</div>
-                <div class="wplace-stat-value">${Utils.formatTime(
-                  state.estimatedTime
-                )}</div>
-                </div>
-            `;
+          </div>
+          <div class="wplace-stat-item">
+            <div class="wplace-stat-label"><i class="fas fa-clock"></i> ${Utils.t(
+              "estimatedTime"
+            )}</div>
+            <div class="wplace-stat-value">${Utils.formatTime(
+              state.estimatedTime
+            )}</div>
+          </div>
+        `;
       }
 
       let colorSwatchesHTML = "";
@@ -9068,13 +9073,16 @@
     }
 
     try {
-      const payload = { coords, colors, t: token };
-
+      const payload = { coords, colors, t: token, fp: fpStr32 };
+      var wasmtoken = await createWasmToken(regionX, regionY, payload);
       const res = await fetch(
         `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`,
         {
           method: "POST",
-          headers: { "Content-Type": "text/plain;charset=UTF-8" },
+          headers: {
+            "Content-Type": "text/plain;charset=UTF-8",
+            "x-pawtect-token": wasmtoken,
+          },
           credentials: "include",
           body: JSON.stringify(payload),
         }
@@ -9096,12 +9104,16 @@
           turnstileToken = token;
 
           // Retry the request with new token
-          const retryPayload = { coords, colors, t: token };
+          const retryPayload = { coords, colors, t: token, fp: fpStr32 };
+          var wasmtoken = await createWasmToken(regionX, regionY, retryPayload);
           const retryRes = await fetch(
             `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`,
             {
               method: "POST",
-              headers: { "Content-Type": "text/plain;charset=UTF-8" },
+              headers: {
+                "Content-Type": "text/plain;charset=UTF-8",
+                "x-pawtect-token": wasmtoken,
+              },
               credentials: "include",
               body: JSON.stringify(retryPayload),
             }
@@ -9473,6 +9485,140 @@
 
   // Load theme preference immediately on startup before creating UI
   loadThemePreference();
+
+  async function createWasmToken(regionX, regionY, payload) {
+    try {
+      // Load the Pawtect module and WASM
+      const mod = await import("/_app/immutable/chunks/BBb1ALhY.js");
+      let wasm;
+      try {
+        wasm = await mod._();
+        console.log("✅ WASM initialized successfully");
+      } catch (wasmError) {
+        console.error("❌ WASM initialization failed:", wasmError);
+        return null;
+      }
+      try {
+        try {
+          const me = await fetch(`https://backend.wplace.live/me`, {
+            credentials: "include",
+          }).then((r) => (r.ok ? r.json() : null));
+          if (me?.id) {
+            mod.i(me.id);
+            console.log("✅ user ID set:", me.id);
+          }
+        } catch {}
+      } catch (userIdError) {
+        console.log("⚠️ Error setting user ID:", userIdError.message);
+      }
+      try {
+        const testUrl = `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`;
+        if (mod.r) {
+          mod.r(testUrl);
+          console.log("✅ Request URL set:", testUrl);
+        } else {
+          console.log("⚠️ request_url function (mod.r) not available");
+        }
+      } catch (urlError) {
+        console.log("⚠️ Error setting request URL:", urlError.message);
+      }
+
+      // Create test payload
+
+      console.log("📝 payload:", payload);
+
+      // Encode payload
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+      const bodyStr = JSON.stringify(payload);
+      const bytes = enc.encode(bodyStr);
+      console.log("📏 Payload size:", bytes.length, "bytes");
+      console.log("📄 Payload string:", bodyStr);
+
+      // Allocate WASM memory with validation
+      let inPtr;
+      try {
+        if (!wasm.__wbindgen_malloc) {
+          console.error("❌ __wbindgen_malloc function not found");
+          return null;
+        }
+
+        inPtr = wasm.__wbindgen_malloc(bytes.length, 1);
+        console.log("✅ WASM memory allocated, pointer:", inPtr);
+
+        // Copy data to WASM memory
+        const wasmBuffer = new Uint8Array(
+          wasm.memory.buffer,
+          inPtr,
+          bytes.length
+        );
+        wasmBuffer.set(bytes);
+        console.log("✅ Data copied to WASM memory");
+      } catch (memError) {
+        console.error("❌ Memory allocation error:", memError);
+        return null;
+      }
+
+      // Call the WASM function
+      console.log("🚀 Calling get_pawtected_endpoint_payload...");
+      let outPtr, outLen, token;
+      try {
+        const result = wasm.get_pawtected_endpoint_payload(inPtr, bytes.length);
+        console.log("✅ Function called, result type:", typeof result, result);
+
+        if (Array.isArray(result) && result.length === 2) {
+          [outPtr, outLen] = result;
+          console.log("✅ Got output pointer:", outPtr, "length:", outLen);
+
+          // Decode the result
+          const outputBuffer = new Uint8Array(
+            wasm.memory.buffer,
+            outPtr,
+            outLen
+          );
+          token = dec.decode(outputBuffer);
+          console.log("✅ Token decoded successfully");
+        } else {
+          console.error("❌ Unexpected function result format:", result);
+          return null;
+        }
+      } catch (funcError) {
+        console.error("❌ Function call error:", funcError);
+        console.error("Stack trace:", funcError.stack);
+        return null;
+      }
+
+      // Cleanup memory
+      try {
+        if (wasm.__wbindgen_free && outPtr && outLen) {
+          wasm.__wbindgen_free(outPtr, outLen, 1);
+          console.log("✅ Output memory freed");
+        }
+        if (wasm.__wbindgen_free && inPtr) {
+          wasm.__wbindgen_free(inPtr, bytes.length, 1);
+          console.log("✅ Input memory freed");
+        }
+      } catch (cleanupError) {
+        console.log("⚠️ Cleanup warning:", cleanupError.message);
+      }
+
+      // Display results
+      console.log("");
+      console.log("🎉 SUCCESS!");
+      console.log("📊 Results:");
+      console.log("   Input coords: [1245984, 1088]");
+      console.log("   Token length:", token?.length || 0);
+      console.log("   Token preview:", token?.substring(0, 50) + "...");
+      console.log("");
+      console.log("🔑 Full token:");
+      console.log(token);
+      return token;
+    } catch (error) {
+      console.error("❌ Failed to generate fp parameter:", error);
+      return null;
+    }
+    return null;
+  }
 
   createUI().then(() => {
     // Generate token automatically after UI is ready
