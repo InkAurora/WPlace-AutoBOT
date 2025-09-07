@@ -9502,40 +9502,60 @@
   // Load theme preference immediately on startup before creating UI
   loadThemePreference();
 
-  async function findPawtectModule() {
-    // Step 1: Find all script tags under the known path
-    const scripts = document.querySelectorAll(
-      'script[src*="/_app/immutable/chunks/"]'
-    );
-    let targetModule = null;
+  async function findAndLoadModule(searchString) {
+    try {
+      // Step 1: Find all <link rel="modulepreload"> tags
+      const preloadLinks = document.querySelectorAll(
+        'link[rel="modulepreload"][href*="/_app/immutable/chunks/"]'
+      );
+      const chunkUrls = Array.from(preloadLinks)
+        .map((link) => link.getAttribute("href"))
+        .filter((href) => href.endsWith(".js"));
 
-    // Step 2: Iterate through scripts and attempt to load each one
-    for (const script of scripts) {
-      const moduleUrl = script.src;
-      try {
-        // Dynamically import the module
-        const mod = await import(moduleUrl);
-
-        // Check if the module exports get_pawtected_endpoint_payload
-        if (mod && typeof mod.get_pawtected_endpoint_payload === "function") {
-          targetModule = mod;
-          console.log(
-            "Found module with get_pawtected_endpoint_payload:",
-            moduleUrl
-          );
-          break; // Stop once we find the correct module
-        }
-      } catch (error) {
-        console.warn(`Failed to load module ${moduleUrl}:`, error);
-        continue; // Continue checking other scripts
+      if (chunkUrls.length === 0) {
+        throw new Error("No chunk files found in modulepreload links.");
       }
-    }
 
-    // Step 3: Use the module or handle the case where it’s not found
-    if (targetModule) {
-      return targetModule;
-    } else {
-      console.error("No module found with get_pawtected_endpoint_payload");
+      console.log(`Found ${chunkUrls.length} chunk files to scan.`);
+
+      // Example URL: ./_app/immutable/chunks/aCy5SlN5.js
+      // Remove the leading '.' if present
+      const formattedUrls = chunkUrls.map((url) =>
+        url.startsWith(".") ? url.slice(1) : url
+      );
+
+      // Step 2: Search each file for the string
+      const searchPromises = formattedUrls.map(async (url) => {
+        try {
+          const response = await fetch(`https://wplace.live${url}`);
+          if (!response.ok) {
+            console.warn(`Failed to fetch ${url}: ${response.status}`);
+            return null;
+          }
+          const text = await response.text();
+          if (text.includes(searchString)) {
+            return url;
+          }
+          return null;
+        } catch (err) {
+          console.warn(`Error fetching ${url}:`, err);
+          return null;
+        }
+      });
+
+      const results = await Promise.all(searchPromises);
+      const matchingUrl = results.find((url) => url !== null);
+
+      if (!matchingUrl) {
+        throw new Error(`No module contains the string "${searchString}".`);
+      }
+
+      // Step 3: Dynamically import the matching module
+      const mod = await import(matchingUrl);
+      console.log(`✅ Loaded module from ${matchingUrl}`);
+      return mod;
+    } catch (error) {
+      console.error("❌ Failed to find/load module:", error);
       return null;
     }
   }
@@ -9543,27 +9563,30 @@
   async function createWasmToken(regionX, regionY, payload) {
     try {
       // Load the Pawtect module and WASM
-      const mod = await findPawtectModule();
+      // const mod = await import("/_app/immutable/chunks/BdJF80pX.js");
+      const mod = await findAndLoadModule(
+        'URL("pawtect_wasm_bg.wasm",import.meta.url)'
+      );
       if (!mod) {
+        console.error("❌ Pawtect module import failed");
+        return null;
+      }
+
+      const wasm = await mod._(
+        "https://wplace.live/_app/immutable/assets/pawtect_wasm_bg.BvxCe1S1.wasm"
+      );
+      if (!wasm) {
         console.error("❌ Pawtect module not found");
         return null;
       }
 
-      let wasm;
-      try {
-        wasm = await mod._();
-        console.log("✅ WASM initialized successfully");
-      } catch (wasmError) {
-        console.error("❌ WASM initialization failed:", wasmError);
-        return null;
-      }
       try {
         try {
           const me = await fetch(`https://backend.wplace.live/me`, {
             credentials: "include",
           }).then((r) => (r.ok ? r.json() : null));
           if (me?.id) {
-            mod.i(me.id);
+            wasm.set_user_id(me.id);
             console.log("✅ user ID set:", me.id);
           }
         } catch {}
@@ -9572,11 +9595,13 @@
       }
       try {
         const testUrl = `https://backend.wplace.live/s0/pixel/${regionX}/${regionY}`;
-        if (mod.r) {
-          mod.r(testUrl);
+        if (wasm.request_url) {
+          wasm.request_url(testUrl);
           console.log("✅ Request URL set:", testUrl);
         } else {
-          console.log("⚠️ request_url function (mod.r) not available");
+          console.log(
+            "⚠️ request_url function (wasm.request_url) not available"
+          );
         }
       } catch (urlError) {
         console.log("⚠️ Error setting request URL:", urlError.message);
