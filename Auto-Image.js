@@ -1701,6 +1701,22 @@
     }
   }
 
+  const randStr = (
+    len,
+    chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+  ) =>
+    [...Array(len)]
+      .map(
+        () =>
+          chars[
+            crypto?.getRandomValues?.(new Uint32Array(1))[0] % chars.length ||
+              Math.floor(Math.random() * chars.length)
+          ]
+      )
+      .join("");
+
+  const fpStr32 = randStr(32);
+
   async function handleCaptchaFallback() {
     // Implementation for fallback token generation would go here
     // This is a placeholder for browser automation fallback
