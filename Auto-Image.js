@@ -9518,14 +9518,14 @@
       console.log(`Found ${chunkUrls.length} chunk files to scan.`);
 
       // Example URL: ./_app/immutable/chunks/aCy5SlN5.js
-      // Remove the leading '.' if present
+      // Remove the leading '.' if present and add base URL
       const formattedUrls = chunkUrls.map((url) =>
-        url.startsWith(".") ? url.slice(1) : url
+        url.startsWith(".") ? `https://wplace.live${url.slice(1)}` : url
       );
 
       const searchPromises = formattedUrls.map(async (url) => {
         try {
-          const response = await fetch(`https://wplace.live${url}`);
+          const response = await fetch(url);
           if (!response.ok) {
             console.warn(`Failed to fetch ${url}: ${response.status}`);
             return null;
