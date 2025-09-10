@@ -8796,6 +8796,32 @@
             }
 
             pixelBatch.pixels = [];
+
+            tileCache.clear();
+
+            overlayManager.disable();
+
+            // Fetch all tiles in parallel
+            await Promise.all(
+              [...affectedTiles].map((tileKey) => {
+                const [tx, ty] = tileKey.split(",").map(Number);
+                return fetchAndCacheTile(tx, ty);
+              })
+            );
+
+            if (overlayState) overlayManager.enable();
+
+            //if the tiles could not be fetched, we should abort
+            if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
+              console.warn("Some tiles could not be fetched, aborting...");
+              state.stopFlag = true;
+              return;
+            }
+
+            y = 0; // Reset to start row to continue painting
+            x = 0; // Reset to start column
+
+            state.paintedPixels = 0;
           }
 
           while (
@@ -8823,9 +8849,7 @@
                 })
               );
 
-              if (overlayState) {
-                overlayManager.enable();
-              }
+              if (overlayState) overlayManager.enable();
 
               //if the tiles could not be fetched, we should abort
               if (
@@ -8841,7 +8865,7 @@
 
               state.paintedPixels = 0;
 
-              pixelBatch = null;
+              pixelBatch.pixels = [];
 
               break;
             }
