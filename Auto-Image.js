@@ -8568,9 +8568,7 @@
         })
       );
 
-      if (overlayState) {
-        overlayManager.enable();
-      }
+      if (overlayState) overlayManager.enable();
 
       //if the tiles could not be fetched, we should abort
       if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
@@ -8581,26 +8579,7 @@
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           if (state.stopFlag) {
-            if (pixelBatch && pixelBatch.pixels.length > 0) {
-              console.log(
-                `🎯 Sending final batch before stop with ${pixelBatch.pixels.length} pixels`
-              );
-              const success = await sendBatchWithRetry(
-                pixelBatch.pixels,
-                pixelBatch.regionX,
-                pixelBatch.regionY
-              );
-              if (success) {
-                pixelBatch.pixels.forEach(() => {
-                  state.paintedPixels++;
-                });
-                state.currentCharges -= pixelBatch.pixels.length;
-                updateStats();
-              }
-            }
-            state.lastPosition = { x, y };
-            updateUI("paintingPaused", "warning", { x, y });
-            break outerLoop;
+            return;
           }
 
           const idx = (y * width + x) * 4;
@@ -8669,10 +8648,6 @@
               state.paintedPixels++;
               continue; // Skip painting this pixel if it already matches
             }
-            // if (!canvasColorId) {
-            //   console.warn("Server is fucking things up");
-            //   continue; // Skip painting this pixel if the canvas color is not found
-            // }
           }
 
           // Skip pixel if color is not available
@@ -8858,7 +8833,7 @@
               ) {
                 console.warn("Some tiles could not be fetched, aborting...");
                 state.stopFlag = true;
-                break outerLoop;
+                return;
               }
 
               y = 0; // Reset to start row to continue painting
