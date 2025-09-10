@@ -8655,6 +8655,74 @@
             continue;
           }
 
+          while (
+            state.currentCharges < state.cooldownChargeThreshold &&
+            !state.stopFlag
+          ) {
+            const { charges, cooldown } = await WPlaceService.getCharges();
+            state.currentCharges = Math.floor(charges);
+            state.cooldown = cooldown;
+
+            // Enable save button during cooldown wait
+            saveBtn.disabled = false;
+
+            updateUI("noChargesThreshold", "warning", {
+              time: Utils.formatTime(state.cooldown),
+              threshold: state.cooldownChargeThreshold,
+              current: state.currentCharges,
+            });
+            await updateStats();
+
+            // Allow auto save during cooldown
+            Utils.performSmartSave();
+
+            await Utils.sleep(state.cooldown);
+
+            if (state.currentCharges >= state.cooldownChargeThreshold) {
+              // Edge-trigger a notification the instant threshold is crossed
+              NotificationManager.maybeNotifyChargesReached(true);
+              updateStats();
+
+              tileCache.clear();
+
+              overlayManager.disable();
+
+              // Fetch all tiles in parallel
+              await Promise.all(
+                [...affectedTiles].map((tileKey) => {
+                  const [tx, ty] = tileKey.split(",").map(Number);
+                  return fetchAndCacheTile(tx, ty);
+                })
+              );
+
+              if (overlayState) overlayManager.enable();
+
+              await Utils.sleep(500); // Small delay to allow UI update
+
+              //if the tiles could not be fetched, we should abort
+              if (
+                [...affectedTiles].some((tileKey) => !tileCache.has(tileKey))
+              ) {
+                console.warn("Some tiles could not be fetched, aborting...");
+                state.stopFlag = true;
+                return;
+              }
+
+              y = 0; // Reset to start row to continue painting
+              x = 0; // Reset to start column
+
+              state.paintedPixels = 0;
+
+              pixelBatch = null;
+
+              if (!state.stopFlag) {
+                saveBtn.disabled = true;
+              }
+
+              break;
+            }
+          }
+
           if (
             !pixelBatch ||
             pixelBatch.regionX !== regionX + adderX ||
@@ -8821,74 +8889,6 @@
             pixelBatch = null;
           }
 
-          while (
-            state.currentCharges < state.cooldownChargeThreshold &&
-            !state.stopFlag
-          ) {
-            const { charges, cooldown } = await WPlaceService.getCharges();
-            state.currentCharges = Math.floor(charges);
-            state.cooldown = cooldown;
-
-            if (state.currentCharges >= state.cooldownChargeThreshold) {
-              // Edge-trigger a notification the instant threshold is crossed
-              NotificationManager.maybeNotifyChargesReached(true);
-              updateStats();
-
-              tileCache.clear();
-
-              overlayManager.disable();
-
-              // Fetch all tiles in parallel
-              await Promise.all(
-                [...affectedTiles].map((tileKey) => {
-                  const [tx, ty] = tileKey.split(",").map(Number);
-                  return fetchAndCacheTile(tx, ty);
-                })
-              );
-
-              if (overlayState) overlayManager.enable();
-
-              await Utils.sleep(500); // Small delay to allow UI update
-
-              //if the tiles could not be fetched, we should abort
-              if (
-                [...affectedTiles].some((tileKey) => !tileCache.has(tileKey))
-              ) {
-                console.warn("Some tiles could not be fetched, aborting...");
-                state.stopFlag = true;
-                return;
-              }
-
-              y = 0; // Reset to start row to continue painting
-              x = 0; // Reset to start column
-
-              state.paintedPixels = 0;
-
-              pixelBatch = null;
-
-              break;
-            }
-
-            // Enable save button during cooldown wait
-            saveBtn.disabled = false;
-
-            updateUI("noChargesThreshold", "warning", {
-              time: Utils.formatTime(state.cooldown),
-              threshold: state.cooldownChargeThreshold,
-              current: state.currentCharges,
-            });
-            await updateStats();
-
-            // Allow auto save during cooldown
-            Utils.performSmartSave();
-
-            await Utils.sleep(state.cooldown);
-          }
-
-          // Disable save button again after exiting wait loop (back to normal painting)
-          if (!state.stopFlag) {
-            saveBtn.disabled = true;
-          }
           if (state.stopFlag) break outerLoop;
         }
       }
