@@ -8795,8 +8795,6 @@
               break outerLoop;
             }
 
-            pixelBatch.pixels = [];
-
             tileCache.clear();
 
             overlayManager.disable();
@@ -8818,10 +8816,7 @@
               return;
             }
 
-            y = 0; // Reset to start row to continue painting
-            x = 0; // Reset to start column
-
-            state.paintedPixels = 0;
+            pixelBatch.pixels = [];
           }
 
           while (
