@@ -8809,6 +8809,8 @@
 
             if (overlayState) overlayManager.enable();
 
+            await Utils.sleep(500); // Small delay to allow UI update
+
             //if the tiles could not be fetched, we should abort
             if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
               console.warn("Some tiles could not be fetched, aborting...");
@@ -8816,7 +8818,7 @@
               return;
             }
 
-            pixelBatch.pixels = [];
+            pixelBatch = null;
           }
 
           while (
@@ -8846,6 +8848,8 @@
 
               if (overlayState) overlayManager.enable();
 
+              await Utils.sleep(500); // Small delay to allow UI update
+
               //if the tiles could not be fetched, we should abort
               if (
                 [...affectedTiles].some((tileKey) => !tileCache.has(tileKey))
@@ -8860,7 +8864,7 @@
 
               state.paintedPixels = 0;
 
-              pixelBatch.pixels = [];
+              pixelBatch = null;
 
               break;
             }
