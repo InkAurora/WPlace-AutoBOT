@@ -8574,6 +8574,9 @@
     loadBotSettings();
     // Ensure notification poller reflects current settings
     NotificationManager.syncFromState();
+
+    // Update cooldown UI elements with loaded value
+    updateCooldownValue(state.cooldownChargeThreshold);
   }
 
   // Utility to get the color of a pixel from the canvas
