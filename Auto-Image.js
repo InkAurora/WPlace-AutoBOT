@@ -4890,6 +4890,14 @@
             border: 1px solid rgba(255,255,255,0.2);
             border-radius: 4px;
             padding: 5px;
+            -moz-appearance: textfield; /* Firefox */
+            appearance: textfield; /* Standard */
+        }
+        /* Webkit browsers (Chrome, Safari) */
+        .wplace-input::-webkit-outer-spin-button,
+        .wplace-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
 
         .wplace-input-btn {
@@ -6316,6 +6324,7 @@
         if (value > cooldownSlider.min) {
           value--;
           updateCooldownValue(value);
+          saveBotSettings();
         }
       });
     }
@@ -6326,6 +6335,7 @@
         if (value < cooldownSlider.max) {
           value++;
           updateCooldownValue(value);
+          saveBotSettings();
         }
       });
     }
