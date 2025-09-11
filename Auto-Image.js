@@ -4853,11 +4853,11 @@
         }
         .wplace-slider-container {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
         }
         .wplace-slider {
-            flex: 1;
+            width: 100%;
             -webkit-appearance: none;
             appearance: none;
             height: 4px;
@@ -4871,6 +4871,34 @@
             height: 14px;
             background: ${theme.highlight};
             border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .wplace-input-group {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .wplace-input {
+            width: 70px;
+            text-align: center;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
+            padding: 5px;
+        }
+
+        .wplace-input-btn {
+            width: 30px;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
             cursor: pointer;
         }
 
@@ -5163,7 +5191,6 @@
       }
 
       .wplace-color-text {
-        flex: 1;
         padding: 6px 10px;
         background: ${theme.secondary};
         border: ${theme.borderWidth} ${theme.borderStyle} ${theme.accent};
@@ -5317,20 +5344,24 @@
 
         <!-- Cooldown Section -->
         <div class="wplace-section">
-            <div class="wplace-section-title">⏱️ ${Utils.t(
-              "cooldownSettings"
-            )}</div>
-            <div class="wplace-cooldown-control">
-                <label id="cooldownLabel">${Utils.t("waitCharges")}:</label>
-                <div class="wplace-slider-container">
-                        <input type="range" id="cooldownSlider" class="wplace-slider" min="1" max="1" value="${
-                          state.cooldownChargeThreshold
-                        }">
-                    <span id="cooldownValue" style="font-weight:bold; min-width: 20px; text-align: center;">${
-                      state.cooldownChargeThreshold
-                    }</span>
-                </div>
+          <div class="wplace-section-title">⏱️ ${Utils.t(
+            "cooldownSettings"
+          )}</div>
+          <div class="wplace-cooldown-control">
+            <label id="cooldownLabel">${Utils.t("waitCharges")}:</label>
+            <div class="wplace-slider-container">
+              <input type="range" id="cooldownSlider" class="wplace-slider" min="1" max="1" value="${
+                state.cooldownChargeThreshold
+              }">
             </div>
+            <div class="wplace-input-group">
+              <button id="cooldownMinusBtn" class="wplace-input-btn">-</button>
+              <input type="number" id="cooldownInput" class="wplace-input" value="${
+                state.cooldownChargeThreshold
+              }">
+              <button id="cooldownPlusBtn" class="wplace-input-btn">+</button>
+            </div>
+          </div>
         </div>
 
         <!-- Data Section -->
@@ -6263,7 +6294,54 @@
     const refreshChargesBtn =
       statsContainer.querySelector("#refreshChargesBtn");
     const cooldownSlider = container.querySelector("#cooldownSlider");
-    const cooldownValue = container.querySelector("#cooldownValue");
+    const cooldownInput = container.querySelector("#cooldownInput");
+    const cooldownMinusBtn = container.querySelector("#cooldownMinusBtn");
+    const cooldownPlusBtn = container.querySelector("#cooldownPlusBtn");
+
+    const updateCooldownValue = (value) => {
+      if (cooldownInput) cooldownInput.value = value;
+      if (cooldownSlider) cooldownSlider.value = value;
+      state.cooldownChargeThreshold = value;
+    };
+
+    if (cooldownSlider) {
+      cooldownSlider.addEventListener("input", (e) => {
+        updateCooldownValue(e.target.value);
+      });
+    }
+
+    if (cooldownMinusBtn) {
+      cooldownMinusBtn.addEventListener("click", () => {
+        let value = parseInt(cooldownInput.value, 10);
+        if (value > cooldownSlider.min) {
+          value--;
+          updateCooldownValue(value);
+        }
+      });
+    }
+
+    if (cooldownPlusBtn) {
+      cooldownPlusBtn.addEventListener("click", () => {
+        let value = parseInt(cooldownInput.value, 10);
+        if (value < cooldownSlider.max) {
+          value++;
+          updateCooldownValue(value);
+        }
+      });
+    }
+
+    if (cooldownInput) {
+      cooldownInput.addEventListener("change", (e) => {
+        let value = parseInt(e.target.value, 10);
+        if (isNaN(value) || value < cooldownSlider.min) {
+          value = cooldownSlider.min;
+        }
+        if (value > cooldownSlider.max) {
+          value = cooldownSlider.max;
+        }
+        updateCooldownValue(value);
+      });
+    }
 
     if (!uploadBtn || !selectPosBtn || !startBtn || !stopBtn) {
       console.error("Some UI elements not found:", {
@@ -8483,11 +8561,11 @@
 
     setTimeout(checkSavedProgress, 1000);
 
-    if (cooldownSlider && cooldownValue) {
+    if (cooldownSlider) {
       cooldownSlider.addEventListener("input", (e) => {
         const threshold = parseInt(e.target.value);
         state.cooldownChargeThreshold = threshold;
-        cooldownValue.textContent = threshold;
+        
         saveBotSettings();
         NotificationManager.resetEdgeTracking(); // prevent spurious notify after threshold change
       });
