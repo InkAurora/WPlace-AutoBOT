@@ -307,7 +307,7 @@
       automation: "Automation",
       noChargesThreshold:
         "⌛ Waiting for charges to reach {threshold}. Currently {current}. Next in {time}...",
-      serverSync: "Syncing...",
+      serverSync: "🔄️ Syncing...",
     },
     ru: {
       title: "WPlace Авто-Изображение",
