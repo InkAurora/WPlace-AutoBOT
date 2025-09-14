@@ -1839,6 +1839,45 @@
   const Utils = {
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 
+    awaitStartTime: async () => {
+      try {
+        console.log("Requesting start time from server...");
+        const response = await fetch("http://localhost:8000", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const startTimeStr = data.startTime;
+
+        if (!startTimeStr) {
+          throw new Error("startTime not found in response");
+        }
+
+        const startTime = new Date(startTimeStr);
+        const now = new Date();
+        const delay = startTime.getTime() - now.getTime();
+
+        if (delay > 0) {
+          console.log(
+            `Waiting for ${delay}ms until ${startTime.toISOString()}`
+          );
+          await Utils.sleep(delay);
+        } else {
+          console.log("Start time is in the past, proceeding immediately.");
+        }
+        console.log("Start time reached.");
+      } catch (error) {
+        console.error("Error in awaitStartTime:", error);
+      }
+    },
+
     waitForSelector: async (selector, interval = 200, timeout = 5000) => {
       const start = Date.now();
       while (Date.now() - start < timeout) {
@@ -8575,7 +8614,7 @@
       cooldownSlider.addEventListener("input", (e) => {
         const threshold = parseInt(e.target.value);
         state.cooldownChargeThreshold = threshold;
-        
+
         saveBotSettings();
         NotificationManager.resetEdgeTracking(); // prevent spurious notify after threshold change
       });
