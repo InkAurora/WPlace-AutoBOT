@@ -307,6 +307,7 @@
       automation: "Automation",
       noChargesThreshold:
         "⌛ Waiting for charges to reach {threshold}. Currently {current}. Next in {time}...",
+      serverSync: "Syncing...",
     },
     ru: {
       title: "WPlace Авто-Изображение",
@@ -1841,9 +1842,14 @@
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 
     serverSync: async () => {
+      if (!state.serverSyncEnabled) {
+        console.log("Server sync is disabled.");
+        return;
+      }
+
       try {
-        console.log("Initiating server sync...");
-        const response = await fetch("http://localhost:8000", {
+        console.log("Initiating sync...");
+        const response = await fetch("http://localhost:9116", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -1868,10 +1874,10 @@
         if (delay > 0) {
           console.log("Awaiting sync...");
           await Utils.sleep(delay);
+          console.log("✅ Sync complete, starting...");
         } else {
-          console.log("Sync successful, starting immediately.");
+          console.log("✅ Sync complete, starting...");
         }
-        console.log("✅ Server sync complete.");
       } catch (error) {
         console.error("Error in serverSync:", error);
       }
@@ -8716,7 +8722,8 @@
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           if (resetLoop) {
-            if (state.serverSyncEnabled) await Utils.serverSync();
+            updateUI("serverSync", "default");
+            await Utils.serverSync();
 
             if (state.stopFlag) {
               break outerLoop;
