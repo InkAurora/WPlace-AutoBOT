@@ -1164,6 +1164,7 @@
     _lastSavePixelCount: 0,
     _lastSaveTime: 0,
     _saveInProgress: false,
+    serverSyncEnabled: false,
     paintedMap: null,
   };
 
@@ -5672,7 +5673,20 @@
             <i class="fas fa-robot" style="color: #4facfe; font-size: 16px;"></i>
             ${Utils.t("automation")}
           </label>
-          <!-- Token generator is always enabled - settings moved to Token Source above -->
+          <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 18px; border: 1px solid rgba(255,255,255,0.1);">
+            <label for="serverSyncToggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+                <div>
+                    <span style="font-weight: 500; color: white;">Enable Server Sync</span>
+                    <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 4px 0 0 0;">Synchronize start time with the server.</p>
+                </div>
+                <input type="checkbox" id="serverSyncToggle" style="
+                  cursor: pointer; 
+                  width: 20px; 
+                  height: 20px;
+                  accent-color: #48dbfb;
+                "/>
+          </label>
+        </div>
         </div>
 
         <!-- Overlay Settings Section -->
@@ -8685,29 +8699,50 @@
         }
       }
 
-      tileCache.clear();
-
-      const overlayState = overlayManager.isEnabled;
-      overlayManager.disable();
-
-      // Fetch all tiles in parallel
-      await Promise.all(
-        [...affectedTiles].map((tileKey) => {
-          const [tx, ty] = tileKey.split(",").map(Number);
-          return fetchAndCacheTile(tx, ty);
-        })
-      );
-
-      if (overlayState) overlayManager.enable();
-
-      //if the tiles could not be fetched, we should abort
-      if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
-        console.warn("Some tiles could not be fetched, aborting...");
-        return;
-      }
+      let resetLoop = true;
 
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
+          if (resetLoop) {
+            await Utils.awaitStartTime();
+
+            if (state.stopFlag) {
+              break outerLoop;
+            }
+
+            resetLoop = false;
+
+            x = 0;
+            y = 0;
+
+            tileCache.clear();
+
+            pixelBatch = null;
+
+            state.paintedPixels = 0;
+
+            const overlayState = overlayManager.isEnabled;
+            overlayManager.disable();
+
+            // Fetch all tiles in parallel
+            await Promise.all(
+              [...affectedTiles].map((tileKey) => {
+                const [tx, ty] = tileKey.split(",").map(Number);
+                return fetchAndCacheTile(tx, ty);
+              })
+            );
+
+            if (overlayState) overlayManager.enable();
+
+            await Utils.sleep(1000); // Small delay to allow UI update
+
+            //if the tiles could not be fetched, we should abort
+            if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
+              console.warn("Some tiles could not be fetched, aborting...");
+              return;
+            }
+          }
+
           if (state.stopFlag) {
             return;
           }
@@ -8813,37 +8848,7 @@
               NotificationManager.maybeNotifyChargesReached(true);
               updateStats();
 
-              tileCache.clear();
-
-              overlayManager.disable();
-
-              // Fetch all tiles in parallel
-              await Promise.all(
-                [...affectedTiles].map((tileKey) => {
-                  const [tx, ty] = tileKey.split(",").map(Number);
-                  return fetchAndCacheTile(tx, ty);
-                })
-              );
-
-              if (overlayState) overlayManager.enable();
-
-              await Utils.sleep(500); // Small delay to allow UI update
-
-              //if the tiles could not be fetched, we should abort
-              if (
-                [...affectedTiles].some((tileKey) => !tileCache.has(tileKey))
-              ) {
-                console.warn("Some tiles could not be fetched, aborting...");
-                state.stopFlag = true;
-                return;
-              }
-
-              y = 0; // Reset to start row to continue painting
-              x = 0; // Reset to start column
-
-              state.paintedPixels = 0;
-
-              pixelBatch = null;
+              resetLoop = true;
 
               if (!state.stopFlag) {
                 saveBtn.disabled = true;
@@ -8993,30 +8998,7 @@
               break outerLoop;
             }
 
-            tileCache.clear();
-
-            overlayManager.disable();
-
-            // Fetch all tiles in parallel
-            await Promise.all(
-              [...affectedTiles].map((tileKey) => {
-                const [tx, ty] = tileKey.split(",").map(Number);
-                return fetchAndCacheTile(tx, ty);
-              })
-            );
-
-            if (overlayState) overlayManager.enable();
-
-            await Utils.sleep(500); // Small delay to allow UI update
-
-            //if the tiles could not be fetched, we should abort
-            if ([...affectedTiles].some((tileKey) => !tileCache.has(tileKey))) {
-              console.warn("Some tiles could not be fetched, aborting...");
-              state.stopFlag = true;
-              return;
-            }
-
-            pixelBatch = null;
+            pixelBatch.pixels = [];
           }
 
           if (state.stopFlag) break outerLoop;
@@ -9332,6 +9314,8 @@
         notifyOnChargesReached: state.notifyOnChargesReached,
         notifyOnlyWhenUnfocused: state.notifyOnlyWhenUnfocused,
         notificationIntervalMinutes: state.notificationIntervalMinutes,
+        serverSyncEnabled:
+          document.getElementById("serverSyncToggle")?.checked ?? false,
       };
       CONFIG.PAINTING_SPEED_ENABLED = settings.paintingSpeedEnabled;
       // AUTO_CAPTCHA_ENABLED is always true - no need to save/load
@@ -9520,6 +9504,11 @@
       const notifIntervalInput = document.getElementById("notifIntervalInput");
       if (notifIntervalInput)
         notifIntervalInput.value = state.notificationIntervalMinutes;
+
+      state.serverSyncEnabled = settings.serverSyncEnabled ?? false;
+      const serverSyncToggle = document.getElementById("serverSyncToggle");
+      if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
+
       NotificationManager.resetEdgeTracking();
     } catch (e) {
       console.warn("Could not load bot settings:", e);
