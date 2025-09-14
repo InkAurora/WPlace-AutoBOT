@@ -1840,9 +1840,9 @@
   const Utils = {
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
 
-    awaitStartTime: async () => {
+    serverSync: async () => {
       try {
-        console.log("Requesting start time from server...");
+        console.log("Initiating server sync...");
         const response = await fetch("http://localhost:8000", {
           method: "POST",
           headers: {
@@ -1866,16 +1866,14 @@
         const delay = startTime.getTime() - now.getTime();
 
         if (delay > 0) {
-          console.log(
-            `Waiting for ${delay}ms until ${startTime.toISOString()}`
-          );
+          console.log("Awaiting sync...");
           await Utils.sleep(delay);
         } else {
-          console.log("Start time is in the past, proceeding immediately.");
+          console.log("Sync successful, starting immediately.");
         }
-        console.log("Start time reached.");
+        console.log("✅ Server sync complete.");
       } catch (error) {
-        console.error("Error in awaitStartTime:", error);
+        console.error("Error in serverSync:", error);
       }
     },
 
@@ -5679,7 +5677,9 @@
                     <span style="font-weight: 500; color: white;">Enable Server Sync</span>
                     <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 4px 0 0 0;">Synchronize start time with the server.</p>
                 </div>
-                <input type="checkbox" id="serverSyncToggle" style="
+                <input type="checkbox" id="serverSyncToggle" ${
+                  state.serverSyncEnabled ? "checked" : ""
+                } style="
                   cursor: pointer; 
                   width: 20px; 
                   height: 20px;
@@ -6770,6 +6770,18 @@
       const enableBlueMarbleToggle = settingsContainer.querySelector(
         "#enableBlueMarbleToggle"
       );
+      const enableServerSync =
+        settingsContainer.querySelector("#serverSyncToggle");
+
+      if (enableServerSync) {
+        enableServerSync.addEventListener("click", () => {
+          state.serverSyncEnabled = enableServerSync.checked;
+          if (state.serverSyncEnabled) {
+            console.log("🌐 Server sync enabled.");
+            Utils.showAlert("Server sync enabled.", "success");
+          }
+        });
+      }
 
       if (overlayOpacitySlider && overlayOpacityValue) {
         overlayOpacitySlider.addEventListener("input", (e) => {
@@ -8704,7 +8716,7 @@
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           if (resetLoop) {
-            await Utils.awaitStartTime();
+            if (state.serverSyncEnabled) await Utils.serverSync();
 
             if (state.stopFlag) {
               break outerLoop;
