@@ -6786,6 +6786,7 @@
             console.log("🌐 Server sync enabled.");
             Utils.showAlert("Server sync enabled.", "success");
           }
+          saveBotSettings();
         });
       }
 
