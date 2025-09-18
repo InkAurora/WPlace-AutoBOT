@@ -3925,7 +3925,6 @@
   }
 
   async function createUI() {
-    loadBotSettings();
     await detectLanguage();
 
     const existingContainer = document.getElementById(
@@ -5744,15 +5743,11 @@
                   accent-color: #48dbfb;
                 " onchange="document.getElementById('serverUrlContainer').style.display = this.checked ? 'block' : 'none'"/>
           </label>
-          <div id="serverUrlContainer" style="display: ${
-            state.serverSyncEnabled ? "block" : "none"
-          }; margin-top: 15px;">
+          <div id="serverUrlContainer" style="display: none; margin-top: 15px;">
             <label for="serverUrlInput" style="display: block; margin-bottom: 8px; color: white; font-weight: 500; font-size: 14px;">${Utils.t(
               "serverUrl"
             )}</label>
-            <input type="text" id="serverUrlInput" value="${
-              state.serverURL || "http://localhost:9116"
-            }" style="
+            <input type="text" id="serverUrlInput" value="" style="
               width: 100%;
               padding: 10px 14px;
               background: rgba(255,255,255,0.1);
@@ -6437,10 +6432,13 @@
     const cooldownMinusBtn = container.querySelector("#cooldownMinusBtn");
     const cooldownPlusBtn = container.querySelector("#cooldownPlusBtn");
 
+    loadBotSettings();
+
     const updateCooldownValue = (value) => {
       if (cooldownInput) cooldownInput.value = value;
       if (cooldownSlider) cooldownSlider.value = value;
       state.cooldownChargeThreshold = value;
+      saveBotSettings();
     };
 
     if (cooldownSlider) {
@@ -7185,6 +7183,7 @@
 
       if (cooldownSlider.max != state.maxCharges) {
         cooldownSlider.max = state.maxCharges;
+        cooldownSlider.value = state.cooldownChargeThreshold;
       }
 
       let imageStatsHTML = "";
@@ -8738,7 +8737,7 @@
 
     if (document.getElementById("serverUrlInput"))
       document.getElementById("serverUrlInput").value =
-        state.serverURL || "http://localhost:9116";
+        state.serverURL || "https://wplace-ink.duckdns.org";
     // Ensure notification poller reflects current settings
     NotificationManager.syncFromState();
 
@@ -9637,7 +9636,10 @@
       state.serverSyncEnabled = settings.serverSyncEnabled ?? false;
       state.serverURL = settings.serverURL || null;
       const serverSyncToggle = document.getElementById("serverSyncToggle");
+      const serverURLContainer = document.getElementById("serverUrlContainer");
       if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
+      if (serverURLContainer && state.serverSyncEnabled)
+        serverURLContainer.style.display = "block";
 
       NotificationManager.resetEdgeTracking();
     } catch (e) {
