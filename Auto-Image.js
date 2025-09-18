@@ -1188,6 +1188,7 @@
     _saveInProgress: false,
     serverURL: null,
     serverSyncEnabled: false,
+    serverToken: null,
     paintedMap: null,
   };
 
@@ -1862,15 +1863,21 @@
   // SERVER SYNC
   const Server = {
     lock: async (tiles) => {
-      if (!state.serverSyncEnabled) return true;
+      // Return 1=proceed, 2=wait and retry, 0=abort
+
+      if (!state.serverSyncEnabled) return 1;
 
       if (!state.serverURL) {
         console.warn("Server URL not set, cannot lock tiles");
-        return false;
+        return 0;
+      }
+
+      if (!state.serverToken) {
+        state.serverToken = randStr(16);
       }
 
       try {
-        if (!Array.isArray(tiles)) return false;
+        if (!Array.isArray(tiles)) return 0;
 
         const requests = tiles.map(async (pair) => {
           const [x, y] = pair;
@@ -1878,33 +1885,38 @@
             const res = await fetch(`${state.serverURL}/lock`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ x, y }),
+              body: JSON.stringify({ x, y, token: state.serverToken }),
             });
-            return res.ok;
+            return res.status;
           } catch (err) {
-            return false;
+            return 0;
           }
         });
 
         const results = await Promise.all(requests);
-        // Return true only if every request was ok (true)
-        return results.every((r) => r === true);
+
+        if (results.some((r) => r === 202)) return 2;
+        if (results.every((r) => r === 200)) return 1;
       } catch (e) {
-        return false;
+        return 0;
       }
     },
     unlock: async (tiles) => {
-      if (!state.serverSyncEnabled) return true;
+      if (!state.serverSyncEnabled) return 1;
 
       if (!state.serverURL) {
         console.warn("Server URL not set, cannot unlock tiles");
-        return false;
+        return 0;
+      }
+
+      if (!state.serverToken) {
+        state.serverToken = randStr(16);
       }
 
       await Utils.sleep(5000); // Wait 5 seconds before unlocking to ensure server processes the changes
 
       try {
-        if (!Array.isArray(tiles)) return false;
+        if (!Array.isArray(tiles)) return 0;
 
         const requests = tiles.map(async (pair) => {
           const [x, y] = pair;
@@ -1912,18 +1924,19 @@
             const res = await fetch(`${state.serverURL}/unlock`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ x, y }),
+              body: JSON.stringify({ x, y, token: state.serverToken }),
             });
-            return res.ok;
+            return res.status;
           } catch (err) {
-            return false;
+            return 0;
           }
         });
 
         const results = await Promise.all(requests);
-        return results.every((r) => r === true);
+        if (results.every((r) => r === 200)) return 1;
+        return 0;
       } catch (e) {
-        return false;
+        return 0;
       }
     },
   };
@@ -8815,19 +8828,21 @@
         for (let x = 0; x < width; x++) {
           if (resetLoop) {
             updateUI("lockTiles", "default");
-            let success = await Server.lock(affectedArray);
+            let status = await Server.lock(affectedArray);
 
             if (state.stopFlag) {
-              await Server.unlock(affectedArray);
+              if (status === 1) {
+                await Server.unlock(affectedArray);
+              }
               return;
             }
 
-            if (!success) {
+            if (status === 2) {
               updateUI("serverSync", "warning");
 
-              while (!success && !state.stopFlag) {
-                await Utils.sleep(5000);
-                success = await Server.lock(affectedArray);
+              while (status === 2 && !state.stopFlag) {
+                await Utils.sleep(3000);
+                status = await Server.lock(affectedArray);
               }
             }
 
