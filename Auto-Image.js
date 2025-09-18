@@ -308,6 +308,9 @@
       noChargesThreshold:
         "⌛ Waiting for charges to reach {threshold}. Currently {current}. Next in {time}...",
       serverSync: "🔄️ Syncing...",
+      serverUrl: "Server URL",
+      enableServerSync: "Enable Server Sync",
+      lockTiles: "🔒 Locking tiles...",
     },
     ru: {
       title: "WPlace Авто-Изображение",
@@ -390,6 +393,8 @@
       automation: "Автоматизация",
       noChargesThreshold:
         "⌛ Ожидание зарядов до {threshold}. Сейчас {current}. Следующий через {time}...",
+      serverUrl: "URL сервера",
+      enableServerSync: "Включить синхронизацию с сервером",
     },
     pt: {
       title: "WPlace Auto-Image",
@@ -472,6 +477,8 @@
       automation: "Automação",
       noChargesThreshold:
         "⌛ Aguardando cargas atingirem {threshold}. Atual: {current}. Próxima em {time}...",
+      serverUrl: "URL do servidor",
+      enableServerSync: "Ativar Sincronização com o Servidor",
     },
     vi: {
       title: "WPlace Auto-Image",
@@ -636,6 +643,8 @@
       automation: "Automatisation",
       noChargesThreshold:
         "⌛ En attente que les charges atteignent {threshold}. Actuel: {current}. Prochaine dans {time}...",
+      serverUrl: "URL du serveur",
+      enableServerSync: "Activer la synchronisation avec le serveur",
     },
     id: {
       title: "WPlace Auto-Image",
@@ -717,6 +726,8 @@
       automation: "Automasi",
       noChargesThreshold:
         "⌛ Menunggu muatan mencapai {threshold}. Saat ini: {current}. Berikutnya dalam {time}...",
+      serverUrl: "URL Server",
+      enableServerSync: "Aktifkan Sinkronisasi Server",
     },
     tr: {
       title: "WPlace Otomatik-Resim",
@@ -794,6 +805,8 @@
       automation: "Otomasyon",
       noChargesThreshold:
         "⌛ Hakların {threshold} seviyesine ulaşması bekleniyor. Şu anda {current}. Sonraki {time} içinde...",
+      serverUrl: "Sunucu URL'si",
+      enableServerSync: "Sunucu Senkronizasyonunu Etkinleştir",
     },
     zh: {
       title: "WPlace 自动图像",
@@ -872,6 +885,8 @@
       automation: "自动化",
       noChargesThreshold:
         "⌛ 等待次数达到 {threshold}。当前 {current}。下次在 {time}...",
+      serverUrl: "服务器URL",
+      enableServerSync: "启用服务器同步",
     },
     "zh-tw": {
       title: "WPlace 自動圖像",
@@ -950,6 +965,8 @@
       automation: "自動化",
       noChargesThreshold:
         "⌛ 等待次數達到 {threshold}。目前 {current}。下次在 {time}...",
+      serverUrl: "伺服器URL",
+      enableServerSync: "啟用伺服器同步",
     },
     ja: {
       title: "WPlace 自動画像",
@@ -1029,6 +1046,8 @@
       automation: "自動化",
       noChargesThreshold:
         "⌛ チャージ {threshold} を待機中。現在 {current}。次は {time} 後...",
+      serverUrl: "サーバーURL",
+      enableServerSync: "サーバー同期を有効にする",
     },
     ko: {
       title: "WPlace 자동 이미지",
@@ -1108,6 +1127,8 @@
       automation: "자동화",
       noChargesThreshold:
         "⌛ 횟수가 {threshold} 에 도달할 때까지 대기 중. 현재 {current}. 다음 {time} 후...",
+      serverUrl: "서버 URL",
+      enableServerSync: "서버 동기화 활성화",
     },
   };
 
@@ -1165,6 +1186,7 @@
     _lastSavePixelCount: 0,
     _lastSaveTime: 0,
     _saveInProgress: false,
+    serverURL: null,
     serverSyncEnabled: false,
     paintedMap: null,
   };
@@ -1837,51 +1859,64 @@
     }
   }
 
+  // SERVER SYNC
+  const Server = {
+    lock: async (tiles) => {
+      try {
+        if (!Array.isArray(tiles)) return false;
+
+        const requests = tiles.map(async (pair) => {
+          const [x, y] = pair;
+          try {
+            const res = await fetch(`${state.serverURL}/lock`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ x, y }),
+            });
+            return res.ok;
+          } catch (err) {
+            return false;
+          }
+        });
+
+        const results = await Promise.all(requests);
+        // Return true only if every request was ok (true)
+        return results.every((r) => r === true);
+      } catch (e) {
+        return false;
+      }
+    },
+    unlock: async (tiles) => {
+      Utils.sleep(5000); // Wait 5 seconds before unlocking to ensure server processes the changes
+
+      try {
+        if (!Array.isArray(tiles)) return false;
+
+        const requests = tiles.map(async (pair) => {
+          const [x, y] = pair;
+          try {
+            const res = await fetch(`${state.serverURL}/unlock`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ x, y }),
+            });
+            return res.ok;
+          } catch (err) {
+            return false;
+          }
+        });
+
+        const results = await Promise.all(requests);
+        return results.every((r) => r === true);
+      } catch (e) {
+        return false;
+      }
+    },
+  };
+
   // UTILITY FUNCTIONS
   const Utils = {
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-
-    serverSync: async () => {
-      if (!state.serverSyncEnabled) {
-        console.log("Server sync is disabled.");
-        return;
-      }
-
-      try {
-        console.log("Initiating sync...");
-        const response = await fetch("http://localhost:9116", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        const startTimeStr = data.startTime;
-
-        if (!startTimeStr) {
-          throw new Error("startTime not found in response");
-        }
-
-        const startTime = new Date(startTimeStr);
-        const now = new Date();
-        const delay = startTime.getTime() - now.getTime();
-
-        if (delay > 0) {
-          console.log("Awaiting sync...");
-          await Utils.sleep(delay);
-          console.log("✅ Sync complete, starting...");
-        } else {
-          console.log("✅ Sync complete, starting...");
-        }
-      } catch (error) {
-        console.error("Error in serverSync:", error);
-      }
-    },
 
     waitForSelector: async (selector, interval = 200, timeout = 5000) => {
       const start = Date.now();
@@ -3876,6 +3911,7 @@
   }
 
   async function createUI() {
+    loadBotSettings();
     await detectLanguage();
 
     const existingContainer = document.getElementById(
@@ -5680,7 +5716,9 @@
           <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 18px; border: 1px solid rgba(255,255,255,0.1);">
             <label for="serverSyncToggle" style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
                 <div>
-                    <span style="font-weight: 500; color: white;">Enable Server Sync</span>
+                    <span style="font-weight: 500; color: white;">${Utils.t(
+                      "enableServerSync"
+                    )}</span>
                     <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 4px 0 0 0;">Synchronize start time with the server.</p>
                 </div>
                 <input type="checkbox" id="serverSyncToggle" ${
@@ -5690,8 +5728,28 @@
                   width: 20px; 
                   height: 20px;
                   accent-color: #48dbfb;
-                "/>
+                " onchange="document.getElementById('serverUrlContainer').style.display = this.checked ? 'block' : 'none'"/>
           </label>
+          <div id="serverUrlContainer" style="display: ${
+            state.serverSyncEnabled ? "block" : "none"
+          }; margin-top: 15px;">
+            <label for="serverUrlInput" style="display: block; margin-bottom: 8px; color: white; font-weight: 500; font-size: 14px;">${Utils.t(
+              "serverUrl"
+            )}</label>
+            <input type="text" id="serverUrlInput" value="${
+              state.serverURL || "http://localhost:9116"
+            }" style="
+              width: 100%;
+              padding: 10px 14px;
+              background: rgba(255,255,255,0.1);
+              color: white;
+              border: 1px solid rgba(255,255,255,0.2);
+              border-radius: 8px;
+              font-size: 14px;
+              outline: none;
+              transition: all 0.3s ease;
+            "/>
+          </div>
         </div>
         </div>
 
@@ -6778,14 +6836,25 @@
       );
       const enableServerSync =
         settingsContainer.querySelector("#serverSyncToggle");
+      const serverUrlInput = settingsContainer.querySelector("#serverUrlInput");
 
       if (enableServerSync) {
         enableServerSync.addEventListener("click", () => {
           state.serverSyncEnabled = enableServerSync.checked;
           if (state.serverSyncEnabled) {
-            console.log("🌐 Server sync enabled.");
+            state.serverURL = serverUrlInput.value;
+            console.log(`🌐 Server sync enabled. URL: ${state.serverURL}`);
             Utils.showAlert("Server sync enabled.", "success");
+          } else {
+            console.log("🌐 Server sync disabled.");
           }
+          saveBotSettings();
+        });
+      }
+
+      if (serverUrlInput) {
+        serverUrlInput.addEventListener("input", (e) => {
+          state.serverURL = e.target.value;
           saveBotSettings();
         });
       }
@@ -8653,7 +8722,9 @@
       });
     }
 
-    loadBotSettings();
+    if (document.getElementById("serverUrlInput"))
+      document.getElementById("serverUrlInput").value =
+        state.serverURL || "http://localhost:9116";
     // Ensure notification poller reflects current settings
     NotificationManager.syncFromState();
 
@@ -8717,17 +8788,35 @@
           affectedTiles.add(`${regionX + adderX},${regionY + adderY}`);
         }
       }
+      const affectedArray = [];
+      for (const tileKey of affectedTiles) {
+        affectedArray.push(tileKey.split(",").map(Number));
+      }
+
+      if (affectedArray.length === 0) {
+        return;
+      }
 
       let resetLoop = true;
 
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
           if (resetLoop) {
-            updateUI("serverSync", "default");
-            await Utils.serverSync();
+            updateUI("lockTiles", "default");
+            let success = await Server.lock(affectedArray);
 
             if (state.stopFlag) {
-              break outerLoop;
+              await Server.unlock(affectedArray);
+              return;
+            }
+
+            if (!success) {
+              updateUI("serverSync", "warning");
+
+              while (!success && !state.stopFlag) {
+                await Utils.sleep(5000);
+                success = await Server.lock(affectedArray);
+              }
             }
 
             resetLoop = false;
@@ -8764,6 +8853,7 @@
           }
 
           if (state.stopFlag) {
+            await Server.unlock(affectedArray);
             return;
           }
 
@@ -8844,9 +8934,25 @@
             state.currentCharges < state.cooldownChargeThreshold &&
             !state.stopFlag
           ) {
+            await Server.unlock(affectedArray);
+
             const { charges, cooldown } = await WPlaceService.getCharges();
             state.currentCharges = Math.floor(charges);
             state.cooldown = cooldown;
+
+            if (state.currentCharges >= state.cooldownChargeThreshold) {
+              // Edge-trigger a notification the instant threshold is crossed
+              NotificationManager.maybeNotifyChargesReached(true);
+              updateStats();
+
+              resetLoop = true;
+
+              if (!state.stopFlag) {
+                saveBtn.disabled = true;
+              }
+
+              break;
+            }
 
             // Enable save button during cooldown wait
             saveBtn.disabled = false;
@@ -8862,20 +8968,6 @@
             Utils.performSmartSave();
 
             await Utils.sleep(state.cooldown);
-
-            if (state.currentCharges >= state.cooldownChargeThreshold) {
-              // Edge-trigger a notification the instant threshold is crossed
-              NotificationManager.maybeNotifyChargesReached(true);
-              updateStats();
-
-              resetLoop = true;
-
-              if (!state.stopFlag) {
-                saveBtn.disabled = true;
-              }
-
-              break;
-            }
           }
 
           if (
@@ -9068,6 +9160,8 @@
           );
         }
       }
+
+      await Server.unlock(affectedArray);
     } finally {
       if (window._chargesInterval) clearInterval(window._chargesInterval);
       window._chargesInterval = null;
@@ -9336,6 +9430,7 @@
         notificationIntervalMinutes: state.notificationIntervalMinutes,
         serverSyncEnabled:
           document.getElementById("serverSyncToggle")?.checked ?? false,
+        serverURL: state.serverURL,
       };
       CONFIG.PAINTING_SPEED_ENABLED = settings.paintingSpeedEnabled;
       // AUTO_CAPTCHA_ENABLED is always true - no need to save/load
@@ -9526,6 +9621,7 @@
         notifIntervalInput.value = state.notificationIntervalMinutes;
 
       state.serverSyncEnabled = settings.serverSyncEnabled ?? false;
+      state.serverURL = settings.serverURL || null;
       const serverSyncToggle = document.getElementById("serverSyncToggle");
       if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
 
