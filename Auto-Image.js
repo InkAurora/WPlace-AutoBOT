@@ -1862,6 +1862,13 @@
   // SERVER SYNC
   const Server = {
     lock: async (tiles) => {
+      if (!state.serverSyncEnabled) return true;
+
+      if (!state.serverURL) {
+        console.warn("Server URL not set, cannot lock tiles");
+        return false;
+      }
+
       try {
         if (!Array.isArray(tiles)) return false;
 
@@ -1887,7 +1894,14 @@
       }
     },
     unlock: async (tiles) => {
-      Utils.sleep(5000); // Wait 5 seconds before unlocking to ensure server processes the changes
+      if (!state.serverSyncEnabled) return true;
+
+      if (!state.serverURL) {
+        console.warn("Server URL not set, cannot unlock tiles");
+        return false;
+      }
+
+      await Utils.sleep(5000); // Wait 5 seconds before unlocking to ensure server processes the changes
 
       try {
         if (!Array.isArray(tiles)) return false;
