@@ -8736,8 +8736,7 @@
     // }
 
     if (document.getElementById("serverUrlInput"))
-      document.getElementById("serverUrlInput").value =
-        state.serverURL || "https://wplace-ink.duckdns.org";
+      document.getElementById("serverUrlInput").value = state.serverURL;
     // Ensure notification poller reflects current settings
     NotificationManager.syncFromState();
 
@@ -9634,7 +9633,7 @@
         notifIntervalInput.value = state.notificationIntervalMinutes;
 
       state.serverSyncEnabled = settings.serverSyncEnabled ?? false;
-      state.serverURL = settings.serverURL || null;
+      state.serverURL = settings.serverURL || "https://wplace-ink.duckdns.org";
       const serverSyncToggle = document.getElementById("serverSyncToggle");
       const serverURLContainer = document.getElementById("serverUrlContainer");
       if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
