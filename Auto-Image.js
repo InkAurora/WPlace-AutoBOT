@@ -6439,11 +6439,13 @@
       if (cooldownSlider) cooldownSlider.value = value;
       state.cooldownChargeThreshold = value;
       saveBotSettings();
+
+      NotificationManager.resetEdgeTracking(); // prevent spurious notify after threshold change
     };
 
     if (cooldownSlider) {
       cooldownSlider.addEventListener("input", (e) => {
-        updateCooldownValue(e.target.value);
+        updateCooldownValue(parseInt(e.target.value));
       });
     }
 
@@ -6453,7 +6455,6 @@
         if (value > cooldownSlider.min) {
           value--;
           updateCooldownValue(value);
-          saveBotSettings();
         }
       });
     }
@@ -6464,7 +6465,6 @@
         if (value < cooldownSlider.max) {
           value++;
           updateCooldownValue(value);
-          saveBotSettings();
         }
       });
     }
@@ -8725,15 +8725,15 @@
 
     setTimeout(checkSavedProgress, 1000);
 
-    if (cooldownSlider) {
-      cooldownSlider.addEventListener("input", (e) => {
-        const threshold = parseInt(e.target.value);
-        state.cooldownChargeThreshold = threshold;
+    // if (cooldownSlider) {
+    //   cooldownSlider.addEventListener("input", (e) => {
+    //     const threshold = parseInt(e.target.value);
+    //     state.cooldownChargeThreshold = threshold;
 
-        saveBotSettings();
-        NotificationManager.resetEdgeTracking(); // prevent spurious notify after threshold change
-      });
-    }
+    //     saveBotSettings();
+    //     NotificationManager.resetEdgeTracking(); // prevent spurious notify after threshold change
+    //   });
+    // }
 
     if (document.getElementById("serverUrlInput"))
       document.getElementById("serverUrlInput").value =
