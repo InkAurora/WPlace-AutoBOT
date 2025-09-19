@@ -1189,7 +1189,7 @@
     serverURL: null,
     serverSyncEnabled: false,
     serverToken: null,
-    serverLocked: null,
+    serverLocked: false,
     paintedMap: null,
   };
 
