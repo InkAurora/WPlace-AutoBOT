@@ -1189,6 +1189,7 @@
     serverURL: null,
     serverSyncEnabled: false,
     serverToken: null,
+    serverLocked: null,
     paintedMap: null,
   };
 
@@ -1626,6 +1627,7 @@
   const MAX_RETRIES = 10;
   const MAX_BATCH_RETRIES = 10; // Maximum attempts for batch sending
   const TOKEN_LIFETIME = 240000; // 4 minutes (tokens typically last 5 min, use 4 for safety)
+  const TOKEN_REFRESH_MARGIN = 30000; // refresh token if less than 30s left
 
   function setTurnstileToken(token) {
     if (_resolveToken) {
@@ -1638,7 +1640,10 @@
   }
 
   function isTokenValid() {
-    return turnstileToken && Date.now() < tokenExpiryTime;
+    // Consider token invalid if it's about to expire within the refresh margin
+    return (
+      turnstileToken && Date.now() < tokenExpiryTime - TOKEN_REFRESH_MARGIN
+    );
   }
 
   function invalidateToken() {
@@ -1656,26 +1661,54 @@
     // Invalidate token if forcing refresh
     if (forceRefresh) invalidateToken();
 
-    // Avoid multiple simultaneous token generations
+    // Avoid multiple simultaneous token generations - wait for existing one
     if (tokenGenerationInProgress) {
       console.log("🔄 Token generation already in progress, waiting...");
-      await Utils.sleep(2000);
+      // Wait up to a short period for other generator to finish
+      const waitStart = Date.now();
+      while (tokenGenerationInProgress && Date.now() - waitStart < 20000) {
+        await Utils.sleep(500);
+      }
       return isTokenValid() ? turnstileToken : null;
     }
 
     tokenGenerationInProgress = true;
-
     try {
       console.log("🔄 Token expired or missing, generating new one...");
-      const token = await handleCaptchaWithRetry();
-      if (token && token.length > 20) {
-        setTurnstileToken(token);
-        console.log("✅ Token captured and cached successfully");
-        return token;
+
+      // Exponential backoff retry loop for robust generation
+      let attempt = 0;
+      let lastError = null;
+      while (attempt < MAX_RETRIES) {
+        try {
+          attempt++;
+          const token = await handleCaptchaWithRetry();
+          if (token && token.length > 20) {
+            setTurnstileToken(token);
+            console.log(
+              `✅ Token captured and cached successfully (attempt ${attempt})`
+            );
+            return token;
+          }
+
+          // Try fallback if generator didn't return valid token and we're in hybrid/manual tolerant modes
+          console.warn(`⚠️ Generator returned no token (attempt ${attempt})`);
+        } catch (err) {
+          lastError = err;
+          console.warn(
+            `⚠️ Token generation attempt ${attempt} failed:`,
+            err?.message || err
+          );
+        }
+
+        // Small jitter + exponential backoff before retrying
+        const backoff = Math.min(30000, 500 * Math.pow(2, attempt));
+        await Utils.sleep(backoff + Math.floor(Math.random() * 400));
       }
 
+      // If generator failed repeatedly, try an explicit fallback (interactive widget)
       console.log(
-        "⚠️ Invisible Turnstile failed, forcing browser automation..."
+        "⚠️ Invisible Turnstile failed after retries, attempting interactive fallback..."
       );
       const fallbackToken = await handleCaptchaFallback();
       if (fallbackToken && fallbackToken.length > 20) {
@@ -1684,7 +1717,7 @@
         return fallbackToken;
       }
 
-      console.log("❌ All token generation methods failed");
+      console.error("❌ All token generation methods failed", lastError);
       return null;
     } finally {
       tokenGenerationInProgress = false;
@@ -1742,12 +1775,7 @@
 
   const fpStr32 = randStr(32);
 
-  async function handleCaptchaFallback() {
-    // Implementation for fallback token generation would go here
-    // This is a placeholder for browser automation fallback
-    console.log("🔄 Attempting fallback token generation...");
-    return null;
-  }
+  // Fallback token generation is implemented later in the file (auto/manual methods).
 
   function inject(callback) {
     const script = document.createElement("script");
@@ -1876,6 +1904,8 @@
         state.serverToken = randStr(16);
       }
 
+      state.serverLocked = false;
+
       try {
         if (!Array.isArray(tiles)) return 0;
 
@@ -1896,13 +1926,16 @@
         const results = await Promise.all(requests);
 
         if (results.some((r) => r === 202)) return 2;
-        if (results.every((r) => r === 200)) return 1;
+        if (results.every((r) => r === 200)) {
+          state.serverLocked = true;
+          return 1;
+        }
       } catch (e) {
         return 0;
       }
     },
     unlock: async (tiles) => {
-      if (!state.serverSyncEnabled) return 1;
+      if (!state.serverSyncEnabled || !state.serverLocked) return 1;
 
       if (!state.serverURL) {
         console.warn("Server URL not set, cannot unlock tiles");
@@ -1933,7 +1966,10 @@
         });
 
         const results = await Promise.all(requests);
-        if (results.every((r) => r === 200)) return 1;
+        if (results.every((r) => r === 200)) {
+          state.serverLocked = false;
+          return 1;
+        }
         return 0;
       } catch (e) {
         return 0;
@@ -5730,6 +5766,15 @@
             <p style="font-size: 12px; color: rgba(255,255,255,0.7); margin: 8px 0 0 0;">
               Generator mode creates tokens automatically. Hybrid mode falls back to manual when generator fails. Manual mode only uses pixel placement.
             </p>
+            <!-- Manual token input (hidden unless manual/hybrid selected) -->
+            <div id="manualTokenContainer" style="display: none; margin-top: 12px;">
+              <label style="display:block; font-size:12px; color:rgba(255,255,255,0.8); margin-bottom:6px;">Manual Turnstile Token</label>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <input id="manualTokenInput" placeholder="Paste token here" style="flex:1; padding:8px 10px; background: rgba(255,255,255,0.06); color: white; border: 1px solid rgba(255,255,255,0.08); border-radius:8px; outline:none;" />
+                <button id="setTokenBtn" style="padding:8px 10px; background: rgba(79,172,254,1); color:white; border:none; border-radius:8px; cursor:pointer;">Set Token</button>
+              </div>
+              <p style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:6px;">Setting a manual token will cache it locally for this session.</p>
+            </div>
           </div>
         </div>
 
@@ -6755,6 +6800,43 @@
             `Token source set to: ${sourceNames[state.tokenSource]}`,
             "success"
           );
+          // Show manual token input when manual or hybrid modes are selected
+          const manualContainer = settingsContainer.querySelector(
+            "#manualTokenContainer"
+          );
+          if (manualContainer) {
+            if (
+              state.tokenSource === "manual" ||
+              state.tokenSource === "hybrid"
+            ) {
+              manualContainer.style.display = "block";
+            } else {
+              manualContainer.style.display = "none";
+            }
+          }
+        });
+      }
+
+      // Manual token set button handler
+      const setTokenBtn = settingsContainer.querySelector("#setTokenBtn");
+      if (setTokenBtn) {
+        setTokenBtn.addEventListener("click", () => {
+          const input = settingsContainer.querySelector("#manualTokenInput");
+          if (!input) return;
+          const token = input.value?.trim();
+          if (!token || token.length < 20) {
+            Utils.showAlert(
+              "Invalid token length. Paste a valid Turnstile token.",
+              "error"
+            );
+            return;
+          }
+          // Cache token and set expiry
+          setTurnstileToken(token);
+          tokenExpiryTime = Date.now() + TOKEN_LIFETIME;
+          state.tokenSource = "manual";
+          saveBotSettings();
+          Utils.showAlert("Manual token set for this session.", "success");
         });
       }
 
@@ -8831,9 +8913,7 @@
             let status = await Server.lock(affectedArray);
 
             if (state.stopFlag) {
-              if (status === 1) {
-                await Server.unlock(affectedArray);
-              }
+              await Server.unlock(affectedArray);
               return;
             }
 
@@ -9600,6 +9680,15 @@
 
       const tokenSourceSelect = document.getElementById("tokenSourceSelect");
       if (tokenSourceSelect) tokenSourceSelect.value = state.tokenSource;
+      const manualTokenContainer = document.getElementById(
+        "manualTokenContainer"
+      );
+      if (manualTokenContainer) {
+        manualTokenContainer.style.display =
+          state.tokenSource === "manual" || state.tokenSource === "hybrid"
+            ? "block"
+            : "none";
+      }
 
       const colorAlgorithmSelect = document.getElementById(
         "colorAlgorithmSelect"
