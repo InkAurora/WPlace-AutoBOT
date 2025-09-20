@@ -1192,8 +1192,9 @@
     serverLocked: false,
     serverAuth: "test",
     helperInitSuccess: false,
-    accTokens: [],
-    accNames: [],
+    accounts: {},
+    accIDs: [],
+    activeToken: null,
     paintedMap: null,
   };
 
@@ -1941,8 +1942,8 @@
 
         window.postMessage(
           {
-            token,
             type: "addAccount",
+            token,
           },
           "*"
         );
@@ -1959,8 +1960,7 @@
       await Promise.resolve(addAccountPromise).then((data) => {
         console.log(data.result.status || data.result.error);
         if (data.result.status && data.result.status === "Account added") {
-          state.accTokens.push(data.result.token);
-          state.accNames.push(data.result.name);
+          state.accounts = data.result.Accounts;
         }
       });
 
@@ -1981,8 +1981,8 @@
 
         window.postMessage(
           {
-            token,
             type: "removeAccount",
+            token,
           },
           "*"
         );
@@ -1999,11 +1999,7 @@
       await Promise.resolve(removeAccountPromise).then((data) => {
         console.log(data.result.status || data.result.error);
         if (data.result.status && data.result.status === "Account removed") {
-          const index = state.accTokens.indexOf(token);
-          if (index !== -1) {
-            state.accTokens.splice(index, 1);
-            state.accNames.splice(index, 1);
-          }
+          state.accounts = data.result.Accounts;
         }
       });
 
@@ -2020,7 +2016,6 @@
 
         window.postMessage(
           {
-            token,
             type: "getAccounts",
           },
           "*"
@@ -2036,8 +2031,7 @@
       });
 
       await Promise.resolve(getAccountsPromise).then((data) => {
-        state.accTokens = data.result.tokens;
-        state.accNames = data.result.names;
+        state.accounts = data.result.Accounts;
       });
 
       return;
@@ -2069,7 +2063,10 @@
 
       let success = false;
       await Promise.resolve(nextAccountPromise).then((data) => {
-        if (data.result.status === "Switched to next account") success = true;
+        if (data.result.status === "Switched to next account") {
+          success = true;
+          state.activeToken = data.result.token;
+        }
       });
 
       return success;
