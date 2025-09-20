@@ -1190,6 +1190,7 @@
     serverSyncEnabled: false,
     serverToken: null,
     serverLocked: false,
+    serverAuth: "test",
     paintedMap: null,
   };
 
@@ -1887,6 +1888,39 @@
       state.language = navigator.language.startsWith("pt") ? "pt" : "en";
     }
   }
+
+  const Helper = {
+    init: async () => {
+      if (!state.serverAuth || !state.serverURL) {
+        console.warn("Server auth or URL not set, cannot init helper");
+        return false;
+      }
+
+      const handshakePromise = new Promise((resolve, reject) => {
+        console.log("Helper handshake initiated.");
+
+        window.postMessage(
+          {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
+            type: "init",
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "init_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      await Promise.resolve(handshakePromise).then((data) => console.log(data));
+      return;
+    },
+  };
 
   // SERVER SYNC
   const Server = {
@@ -9743,6 +9777,8 @@
       if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
       if (serverURLContainer && state.serverSyncEnabled)
         serverURLContainer.style.display = "block";
+
+      Helper.init();
 
       NotificationManager.resetEdgeTracking();
     } catch (e) {
