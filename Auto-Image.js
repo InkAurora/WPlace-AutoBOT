@@ -1191,6 +1191,9 @@
     serverToken: null,
     serverLocked: false,
     serverAuth: "test",
+    helperInitSuccess: false,
+    accTokens: [],
+    accNames: [],
     paintedMap: null,
   };
 
@@ -1917,8 +1920,159 @@
         window.addEventListener("message", handler);
       });
 
-      await Promise.resolve(handshakePromise).then((data) => console.log(data));
+      await Promise.resolve(handshakePromise).then((data) => {
+        console.log(data.result.status || data.result.error);
+        state.helperInitSuccess = data.result.status === "Initialized";
+      });
       return;
+    },
+    addAccount: async (token) => {
+      if (!token) {
+        console.warn("No token. Cannot add account.");
+        return false;
+      }
+      if (!state.helperInitSuccess) {
+        console.warn("Helper hasn't been initialized. Cannot add account.");
+        return false;
+      }
+
+      const addAccountPromise = new Promise((resolve, reject) => {
+        console.log("Adding account...");
+
+        window.postMessage(
+          {
+            token,
+            type: "addAccount",
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "addAccount_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      await Promise.resolve(addAccountPromise).then((data) => {
+        console.log(data.result.status || data.result.error);
+        if (data.result.status && data.result.status === "Account added") {
+          state.accTokens.push(data.result.token);
+          state.accNames.push(data.result.name);
+        }
+      });
+
+      return;
+    },
+    removeAccount: async (token) => {
+      if (!token) {
+        console.warn("No token. Cannot remove account.");
+        return false;
+      }
+      if (!state.helperInitSuccess) {
+        console.warn("Helper hasn't been initialized. Cannot remove account.");
+        return false;
+      }
+
+      const removeAccountPromise = new Promise((resolve, reject) => {
+        console.log("Removing account...");
+
+        window.postMessage(
+          {
+            token,
+            type: "removeAccount",
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "removeAccount_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      await Promise.resolve(removeAccountPromise).then((data) => {
+        console.log(data.result.status || data.result.error);
+        if (data.result.status && data.result.status === "Account removed") {
+          const index = state.accTokens.indexOf(token);
+          if (index !== -1) {
+            state.accTokens.splice(index, 1);
+            state.accNames.splice(index, 1);
+          }
+        }
+      });
+
+      return;
+    },
+    getAccounts: async () => {
+      if (!state.helperInitSuccess) {
+        console.warn("Helper hasn't been initialized. Cannot get accounts.");
+        return false;
+      }
+
+      const getAccountsPromise = new Promise((resolve, reject) => {
+        console.log("Requesting accounts...");
+
+        window.postMessage(
+          {
+            token,
+            type: "getAccounts",
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "getAccounts_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      await Promise.resolve(getAccountsPromise).then((data) => {
+        state.accTokens = data.result.tokens;
+        state.accNames = data.result.names;
+      });
+
+      return;
+    },
+    nextAccount: async () => {
+      if (!state.helperInitSuccess) {
+        console.warn("Helper hasn't been initialized. Cannot swap accounts.");
+        return false;
+      }
+
+      const nextAccountPromise = new Promise((resolve, reject) => {
+        console.log("Requesting account swap...");
+
+        window.postMessage(
+          {
+            type: "nextAccount",
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "nextAccount_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      let success = false;
+      await Promise.resolve(nextAccountPromise).then((data) => {
+        if (data.result.status === "Switched to next account") success = true;
+      });
+
+      return success;
     },
   };
 
@@ -9778,7 +9932,7 @@
       if (serverURLContainer && state.serverSyncEnabled)
         serverURLContainer.style.display = "block";
 
-      Helper.init();
+      if (state.serverSyncEnabled) Helper.init();
 
       NotificationManager.resetEdgeTracking();
     } catch (e) {
