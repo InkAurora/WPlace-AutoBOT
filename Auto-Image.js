@@ -1192,6 +1192,7 @@
     serverLocked: false,
     serverAuth: "test",
     helperInitSuccess: false,
+    renderAccountsCallback: null,
     accounts: {},
     accIDs: [],
     activeToken: null,
@@ -1922,9 +1923,12 @@
       });
 
       await Promise.resolve(handshakePromise).then((data) => {
-        console.log(data.result.status || data.result.error);
-        state.helperInitSuccess = data.result.status === "Initialized";
+        console.log(data.result.log || data.result.error);
+        state.helperInitSuccess = data.result.status === "success";
       });
+
+      if (state.helperInitSuccess) Helper.getAccounts();
+
       return;
     },
     addAccount: async (token) => {
@@ -1958,8 +1962,8 @@
       });
 
       await Promise.resolve(addAccountPromise).then((data) => {
-        console.log(data.result.status || data.result.error);
-        if (data.result.status && data.result.status === "Account added") {
+        console.log(data.result.log || data.result.error);
+        if (data.result.status && data.result.status === "success") {
           state.accounts = data.result.Accounts;
         }
       });
@@ -1997,8 +2001,8 @@
       });
 
       await Promise.resolve(removeAccountPromise).then((data) => {
-        console.log(data.result.status || data.result.error);
-        if (data.result.status && data.result.status === "Account removed") {
+        console.log(data.result.log || data.result.error);
+        if (data.result.status && data.result.status === "success") {
           state.accounts = data.result.Accounts;
         }
       });
@@ -2031,8 +2035,11 @@
       });
 
       await Promise.resolve(getAccountsPromise).then((data) => {
+        console.log(data.result.log || data.result.error);
         state.accounts = data.result.Accounts;
       });
+
+      state.renderAccountsCallback();
 
       return;
     },
@@ -6001,6 +6008,20 @@
               outline: none;
               transition: all 0.3s ease;
             "/>
+            
+            <!-- Accounts Manager: map state.accounts, add/remove accounts -->
+            <div id="accountsManager" style="margin-top:12px; background: rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03);">
+              <label style="display:block; font-size:13px; color: rgba(255,255,255,0.9); margin-bottom:8px; font-weight:600;">Accounts</label>
+              <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                <input id="accountTokenInput" placeholder="Enter account token" style="flex:1; padding:8px 10px; background: rgba(255,255,255,0.04); color: white; border: 1px solid rgba(255,255,255,0.06); border-radius:8px; outline:none;" />
+                <button id="addAccountBtn" style="padding:8px 10px; background: rgba(79,172,254,1); color:white; border:none; border-radius:8px; cursor:pointer;">Add</button>
+                <button id="refreshAccountsBtn" style="padding:8px 10px; background: rgba(255,255,255,0.06); color:white; border:1px solid rgba(255,255,255,0.08); border-radius:8px; cursor:pointer;">Refresh</button>
+              </div>
+              <div id="accountsList" style="max-height:160px; overflow:auto; display:flex; flex-direction:column; gap:8px;">
+                <div style="opacity:0.6; font-size:13px;">No accounts loaded.</div>
+              </div>
+              <div style="font-size:11px; color:rgba(255,255,255,0.6); margin-top:8px;">Add an account using its token. Use Refresh to query current accounts from the helper.</div>
+            </div>
           </div>
         </div>
         </div>
@@ -7130,6 +7151,14 @@
         settingsContainer.querySelector("#serverSyncToggle");
       const serverUrlInput = settingsContainer.querySelector("#serverUrlInput");
 
+      const accountTokenInput =
+        settingsContainer.querySelector("#accountTokenInput");
+      const addAccountBtn = settingsContainer.querySelector("#addAccountBtn");
+      const refreshAccountsBtn = settingsContainer.querySelector(
+        "#refreshAccountsBtn"
+      );
+      const accountsList = settingsContainer.querySelector("#accountsList");
+
       if (enableServerSync) {
         enableServerSync.addEventListener("click", () => {
           state.serverSyncEnabled = enableServerSync.checked;
@@ -7150,6 +7179,110 @@
           saveBotSettings();
         });
       }
+
+      // Helper: render accounts list
+      const renderAccounts = () => {
+        if (!accountsList) return;
+        // Clear
+        accountsList.innerHTML = "";
+
+        const accounts = state.accounts || {};
+        if (!accounts || Object.keys(accounts).length === 0) {
+          const empty = document.createElement("div");
+          empty.style.opacity = "0.6";
+          empty.style.fontSize = "13px";
+          empty.textContent = "No accounts loaded.";
+          accountsList.appendChild(empty);
+          return;
+        }
+
+        const acctArray = Object.values(state.accounts);
+
+        acctArray.forEach((acct) => {
+          const row = document.createElement("div");
+          row.style.display = "flex";
+          row.style.justifyContent = "space-between";
+          row.style.alignItems = "center";
+          row.style.padding = "6px 8px";
+          row.style.background = "rgba(0,0,0,0.12)";
+          row.style.borderRadius = "6px";
+
+          const info = document.createElement("div");
+          info.style.display = "flex";
+          info.style.flexDirection = "column";
+          info.style.gap = "2px";
+          const name = document.createElement("div");
+          name.style.fontSize = "13px";
+          name.style.fontWeight = "600";
+          name.textContent = acct.name;
+          const id = document.createElement("div");
+          id.style.fontSize = "12px";
+          id.style.opacity = "0.8";
+          id.textContent = `#${acct.id}`;
+          info.appendChild(name);
+          info.appendChild(id);
+
+          const actions = document.createElement("div");
+          const removeBtn = document.createElement("button");
+          removeBtn.textContent = "Remove";
+          removeBtn.style.padding = "6px 8px";
+          removeBtn.style.background = "rgba(255,255,255,0.06)";
+          removeBtn.style.color = "white";
+          removeBtn.style.border = "1px solid rgba(255,255,255,0.08)";
+          removeBtn.style.borderRadius = "6px";
+          removeBtn.style.cursor = "pointer";
+
+          removeBtn.addEventListener("click", async () => {
+            const token = acct.token;
+            if (!token) {
+              console.warn(
+                "No token available for account, cannot remove via helper."
+              );
+              return;
+            }
+            await Helper.removeAccount(token);
+            renderAccounts();
+          });
+
+          actions.appendChild(removeBtn);
+
+          row.appendChild(info);
+          row.appendChild(actions);
+          accountsList.appendChild(row);
+        });
+      };
+
+      state.renderAccountsCallback = renderAccounts;
+
+      async function refreshAccounts() {
+        await Helper.getAccounts();
+      }
+
+      if (refreshAccountsBtn) {
+        refreshAccountsBtn.addEventListener("click", async () => {
+          if (!state.helperInitSuccess) {
+            // try to init helper if server auth and url set
+            if (state.serverAuth && state.serverURL) {
+              await Helper.init();
+            }
+          }
+          await refreshAccounts();
+        });
+      }
+
+      if (addAccountBtn && accountTokenInput) {
+        addAccountBtn.addEventListener("click", async () => {
+          const token =
+            accountTokenInput.value && accountTokenInput.value.trim();
+          if (!token) return;
+          await Helper.addAccount(token);
+          accountTokenInput.value = "";
+          renderAccounts();
+        });
+      }
+
+      // Initial render when opening settings
+      renderAccounts();
 
       if (overlayOpacitySlider && overlayOpacityValue) {
         overlayOpacitySlider.addEventListener("input", (e) => {
