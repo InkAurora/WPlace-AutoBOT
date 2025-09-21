@@ -1190,7 +1190,7 @@
     serverSyncEnabled: false,
     serverToken: null,
     serverLocked: false,
-    serverAuth: "test",
+    serverAuth: null,
     helperInitSuccess: false,
     renderAccountsCallback: null,
     accountSwapperEnabled: false,
@@ -7253,7 +7253,6 @@
           }
           info.appendChild(name);
           info.appendChild(id);
-          info.appendChild(chargesSpan);
 
           const actions = document.createElement("div");
           const removeBtn = document.createElement("button");
@@ -7280,6 +7279,7 @@
           actions.appendChild(removeBtn);
 
           row.appendChild(info);
+          row.appendChild(chargesSpan);
           row.appendChild(actions);
           accountsList.appendChild(row);
         });
