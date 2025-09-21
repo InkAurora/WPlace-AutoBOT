@@ -1193,6 +1193,7 @@
     serverAuth: "test",
     helperInitSuccess: false,
     renderAccountsCallback: null,
+    accountSwapperEnabled: false,
     accounts: {},
     accIDs: [],
     activeToken: null,
@@ -6009,6 +6010,17 @@
               transition: all 0.3s ease;
             "/>
             
+            <!-- Account Swapper Toggle -->
+            <label for="accountSwapperToggle" style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
+              <div>
+                <span style="font-weight:500; color:white;">Account Swapper</span>
+                <p style="font-size:12px; color:rgba(255,255,255,0.7); margin:4px 0 0 0;">Enable automatic account swapping.</p>
+              </div>
+              <input type="checkbox" id="accountSwapperToggle" ${
+                state.accountSwapperEnabled ? "checked" : ""
+              } style="cursor:pointer; width:20px; height:20px; accent-color:#48dbfb;" />
+            </label>
+            
             <!-- Accounts Manager: map state.accounts, add/remove accounts -->
             <div id="accountsManager" style="margin-top:12px; background: rgba(255,255,255,0.03); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.03);">
               <label style="display:block; font-size:13px; color: rgba(255,255,255,0.9); margin-bottom:8px; font-weight:600;">Accounts</label>
@@ -7158,6 +7170,9 @@
         "#refreshAccountsBtn"
       );
       const accountsList = settingsContainer.querySelector("#accountsList");
+      const accountSwapperToggle = settingsContainer.querySelector(
+        "#accountSwapperToggle"
+      );
 
       if (enableServerSync) {
         enableServerSync.addEventListener("click", () => {
@@ -7219,8 +7234,26 @@
           id.style.fontSize = "12px";
           id.style.opacity = "0.8";
           id.textContent = `#${acct.id}`;
+          // Charges display: floor(count)/max
+          const chargesSpan = document.createElement("div");
+          chargesSpan.style.fontSize = "12px";
+          chargesSpan.style.opacity = "0.9";
+          chargesSpan.style.marginTop = "2px";
+          try {
+            const charges = acct && acct.charges;
+            if (charges) {
+              const count = Math.floor(Number(charges.count) || 0);
+              const max = Number(charges.max) || 0;
+              chargesSpan.textContent = `${count}/${max}`;
+            } else {
+              chargesSpan.textContent = "-/-";
+            }
+          } catch (e) {
+            chargesSpan.textContent = "-/-";
+          }
           info.appendChild(name);
           info.appendChild(id);
+          info.appendChild(chargesSpan);
 
           const actions = document.createElement("div");
           const removeBtn = document.createElement("button");
@@ -7254,10 +7287,6 @@
 
       state.renderAccountsCallback = renderAccounts;
 
-      async function refreshAccounts() {
-        await Helper.getAccounts();
-      }
-
       if (refreshAccountsBtn) {
         refreshAccountsBtn.addEventListener("click", async () => {
           if (!state.helperInitSuccess) {
@@ -7266,7 +7295,7 @@
               await Helper.init();
             }
           }
-          await refreshAccounts();
+          await Helper.getAccounts();
         });
       }
 
@@ -7278,6 +7307,13 @@
           await Helper.addAccount(token);
           accountTokenInput.value = "";
           renderAccounts();
+        });
+      }
+
+      if (accountSwapperToggle) {
+        accountSwapperToggle.addEventListener("click", (e) => {
+          state.accountSwapperEnabled = accountSwapperToggle.checked;
+          saveBotSettings();
         });
       }
 
@@ -9856,6 +9892,7 @@
         serverSyncEnabled:
           document.getElementById("serverSyncToggle")?.checked ?? false,
         serverURL: state.serverURL,
+        accountSwapperEnabled: state.accountSwapperEnabled,
       };
       CONFIG.PAINTING_SPEED_ENABLED = settings.paintingSpeedEnabled;
       // AUTO_CAPTCHA_ENABLED is always true - no need to save/load
@@ -10063,6 +10100,8 @@
         serverURLContainer.style.display = "block";
 
       if (state.serverSyncEnabled) Helper.init();
+
+      state.accountSwapperEnabled = settings.accountSwapperEnabled;
 
       NotificationManager.resetEdgeTracking();
     } catch (e) {
