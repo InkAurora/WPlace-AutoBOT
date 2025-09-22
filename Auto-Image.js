@@ -1896,7 +1896,7 @@
   }
 
   const Helper = {
-    init: async () => {
+    init: async (getAccounts = true) => {
       if (!state.serverAuth || !state.serverURL) {
         console.warn("Server auth or URL not set, cannot init helper");
         return false;
@@ -1928,7 +1928,7 @@
         state.helperInitSuccess = data.result.status === "success";
       });
 
-      if (state.helperInitSuccess) Helper.getAccounts();
+      if (state.helperInitSuccess && getAccounts) Helper.getAccounts();
 
       return;
     },
@@ -6009,6 +6009,18 @@
               outline: none;
               transition: all 0.3s ease;
             "/>
+            <label for="serverAuthInput" style="display:block; margin-top:10px; margin-bottom:8px; color:white; font-weight:500; font-size:14px;">Server Auth</label>
+            <input type="text" id="serverAuthInput" value="" placeholder="Auth token" style="
+              width: 100%;
+              padding: 10px 14px;
+              background: rgba(255,255,255,0.06);
+              color: white;
+              border: 1px solid rgba(255,255,255,0.12);
+              border-radius: 8px;
+              font-size: 14px;
+              outline: none;
+              transition: all 0.3s ease;
+            "/>
             
             <!-- Account Swapper Toggle -->
             <label for="accountSwapperToggle" style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">
@@ -7162,6 +7174,8 @@
       const enableServerSync =
         settingsContainer.querySelector("#serverSyncToggle");
       const serverUrlInput = settingsContainer.querySelector("#serverUrlInput");
+      const serverAuthInput =
+        settingsContainer.querySelector("#serverAuthInput");
 
       const accountTokenInput =
         settingsContainer.querySelector("#accountTokenInput");
@@ -7195,6 +7209,13 @@
         });
       }
 
+      if (serverAuthInput) {
+        serverAuthInput.addEventListener("input", (e) => {
+          state.serverAuth = e.target.value;
+          saveBotSettings();
+        });
+      }
+
       // Helper: render accounts list
       const renderAccounts = () => {
         if (!accountsList) return;
@@ -7216,7 +7237,7 @@
         acctArray.forEach((acct) => {
           const row = document.createElement("div");
           row.style.display = "flex";
-          row.style.justifyContent = "space-between";
+          row.style.justifyContent = "flex-end";
           row.style.alignItems = "center";
           row.style.padding = "6px 8px";
           row.style.background = "rgba(0,0,0,0.12)";
@@ -7239,6 +7260,8 @@
           chargesSpan.style.fontSize = "12px";
           chargesSpan.style.opacity = "0.9";
           chargesSpan.style.marginTop = "2px";
+          chargesSpan.style.marginLeft = "auto";
+          chargesSpan.style.marginRight = "10px";
           try {
             const charges = acct && acct.charges;
             if (charges) {
@@ -7292,7 +7315,7 @@
           if (!state.helperInitSuccess) {
             // try to init helper if server auth and url set
             if (state.serverAuth && state.serverURL) {
-              await Helper.init();
+              await Helper.init(false);
             }
           }
           await Helper.getAccounts();
@@ -9186,6 +9209,8 @@
 
     if (document.getElementById("serverUrlInput"))
       document.getElementById("serverUrlInput").value = state.serverURL;
+    if (document.getElementById("serverAuthInput"))
+      document.getElementById("serverAuthInput").value = state.serverAuth || "";
     // Ensure notification poller reflects current settings
     NotificationManager.syncFromState();
 
@@ -9259,6 +9284,7 @@
       }
 
       let resetLoop = true;
+      let hasSwapped = false;
 
       outerLoop: for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -9281,6 +9307,7 @@
             }
 
             resetLoop = false;
+            hasSwapped = false;
 
             x = 0;
             y = 0;
@@ -9389,46 +9416,6 @@
           // Skip pixel if color is not available
           if (colorId === undefined || colorId === null) {
             continue;
-          }
-
-          while (
-            state.currentCharges < state.cooldownChargeThreshold &&
-            !state.stopFlag
-          ) {
-            await Server.unlock(affectedArray);
-
-            const { charges, cooldown } = await WPlaceService.getCharges();
-            state.currentCharges = Math.floor(charges);
-            state.cooldown = cooldown;
-
-            if (state.currentCharges >= state.cooldownChargeThreshold) {
-              // Edge-trigger a notification the instant threshold is crossed
-              NotificationManager.maybeNotifyChargesReached(true);
-              updateStats();
-
-              resetLoop = true;
-
-              if (!state.stopFlag) {
-                saveBtn.disabled = true;
-              }
-
-              break;
-            }
-
-            // Enable save button during cooldown wait
-            saveBtn.disabled = false;
-
-            updateUI("noChargesThreshold", "warning", {
-              time: Utils.formatTime(state.cooldown),
-              threshold: state.cooldownChargeThreshold,
-              current: state.currentCharges,
-            });
-            await updateStats();
-
-            // Allow auto save during cooldown
-            Utils.performSmartSave();
-
-            await Utils.sleep(state.cooldown);
           }
 
           if (
@@ -9572,6 +9559,51 @@
             }
 
             pixelBatch.pixels = [];
+          }
+
+          while (
+            state.currentCharges < state.cooldownChargeThreshold &&
+            !state.stopFlag
+          ) {
+            await Server.unlock(affectedArray);
+
+            if (state.accountSwapperEnabled && !hasSwapped) {
+              await Helper.nextAccount();
+              hasSwapped = true;
+            }
+
+            const { charges, cooldown } = await WPlaceService.getCharges();
+            state.currentCharges = Math.floor(charges);
+            state.cooldown = cooldown;
+
+            if (state.currentCharges >= state.cooldownChargeThreshold) {
+              // Edge-trigger a notification the instant threshold is crossed
+              NotificationManager.maybeNotifyChargesReached(true);
+              updateStats();
+
+              resetLoop = true;
+
+              if (!state.stopFlag) {
+                saveBtn.disabled = true;
+              }
+
+              break;
+            }
+
+            // Enable save button during cooldown wait
+            saveBtn.disabled = false;
+
+            updateUI("noChargesThreshold", "warning", {
+              time: Utils.formatTime(state.cooldown),
+              threshold: state.cooldownChargeThreshold,
+              current: state.currentCharges,
+            });
+            updateStats();
+
+            // Allow auto save during cooldown
+            Utils.performSmartSave();
+
+            await Utils.sleep(state.cooldown);
           }
 
           if (state.stopFlag) break outerLoop;
@@ -9893,6 +9925,7 @@
           document.getElementById("serverSyncToggle")?.checked ?? false,
         serverURL: state.serverURL,
         accountSwapperEnabled: state.accountSwapperEnabled,
+        serverAuth: state.serverAuth,
       };
       CONFIG.PAINTING_SPEED_ENABLED = settings.paintingSpeedEnabled;
       // AUTO_CAPTCHA_ENABLED is always true - no need to save/load
@@ -10099,9 +10132,16 @@
       if (serverURLContainer && state.serverSyncEnabled)
         serverURLContainer.style.display = "block";
 
-      if (state.serverSyncEnabled) Helper.init();
-
       state.accountSwapperEnabled = settings.accountSwapperEnabled;
+      state.serverAuth = settings.serverAuth || "";
+
+      const accountSwapperToggle = document.getElementById(
+        "accountSwapperToggle"
+      );
+      if (accountSwapperToggle)
+        accountSwapperToggle.checked = state.accountSwapperEnabled;
+
+      if (state.serverSyncEnabled) Helper.init();
 
       NotificationManager.resetEdgeTracking();
     } catch (e) {
