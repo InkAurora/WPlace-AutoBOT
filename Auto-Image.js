@@ -7324,18 +7324,22 @@
           swapBtn.textContent = "Swap";
           swapBtn.style.marginRight = "2px";
           swapBtn.style.padding = "6px 8px";
-          swapBtn.style.background = "rgba(255,255,255,0.06)";
+          swapBtn.style.background = "rgba(255, 255, 255, 0.06)";
           swapBtn.style.color = "white";
-          swapBtn.style.border = "1px solid rgba(255,255,255,0.08)";
+          swapBtn.style.border = "1px solid rgba(255, 255 ,255, 0.08)";
           swapBtn.style.borderRadius = "6px";
           swapBtn.style.cursor = "pointer";
-          if (state.activeToken === acct.token) swapBtn.style.disabled = true;
+          if (state.activeToken === acct.token) {
+            swapBtn.disabled = true;
+            swapBtn.style.color = "rgba(255, 255, 255, 0.4)";
+            swapBtn.style.cursor = "default";
+          }
           const removeBtn = document.createElement("button");
           removeBtn.textContent = "Remove";
           removeBtn.style.padding = "6px 8px";
-          removeBtn.style.background = "rgba(255,255,255,0.06)";
+          removeBtn.style.background = "rgba(255, 255, 255, 0.06)";
           removeBtn.style.color = "white";
-          removeBtn.style.border = "1px solid rgba(255,255,255,0.08)";
+          removeBtn.style.border = "1px solid rgba(255, 255, 255, 0.08)";
           removeBtn.style.borderRadius = "6px";
           removeBtn.style.cursor = "pointer";
 
