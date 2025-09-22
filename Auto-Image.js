@@ -2012,8 +2012,8 @@
     },
     getAccounts: async () => {
       if (!state.helperInitSuccess) {
-        console.warn("Helper hasn't been initialized. Cannot get accounts.");
-        return false;
+        await Helper.init();
+        if (!state.helperInitSuccess) return;
       }
 
       const getAccountsPromise = new Promise((resolve) => {
