@@ -7293,6 +7293,8 @@
           name.style.fontSize = "13px";
           name.style.fontWeight = "600";
           name.textContent = acct.name;
+          if (acct.name.includes("(expired)"))
+            name.style.color = "rgba(255, 0, 0, 0.6)";
           const id = document.createElement("div");
           id.style.fontSize = "12px";
           id.style.opacity = "0.8";
