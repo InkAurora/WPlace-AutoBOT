@@ -1195,7 +1195,6 @@
     renderAccountsCallback: null,
     accountSwapperEnabled: false,
     accounts: {},
-    accIDs: [],
     activeToken: null,
     paintedMap: null,
   };
@@ -1902,7 +1901,7 @@
         return false;
       }
 
-      const handshakePromise = new Promise((resolve, reject) => {
+      const handshakePromise = new Promise((resolve) => {
         console.log("Helper handshake initiated.");
 
         window.postMessage(
@@ -1942,7 +1941,7 @@
         return false;
       }
 
-      const addAccountPromise = new Promise((resolve, reject) => {
+      const addAccountPromise = new Promise((resolve) => {
         console.log("Adding account...");
 
         window.postMessage(
@@ -1964,7 +1963,7 @@
 
       await Promise.resolve(addAccountPromise).then((data) => {
         console.log(data.result.log || data.result.error);
-        if (data.result.status && data.result.status === "success") {
+        if (data.result.status === "success") {
           state.accounts = data.result.Accounts;
         }
       });
@@ -1981,7 +1980,7 @@
         return false;
       }
 
-      const removeAccountPromise = new Promise((resolve, reject) => {
+      const removeAccountPromise = new Promise((resolve) => {
         console.log("Removing account...");
 
         window.postMessage(
@@ -2005,6 +2004,7 @@
         console.log(data.result.log || data.result.error);
         if (data.result.status && data.result.status === "success") {
           state.accounts = data.result.Accounts;
+          state.activeToken = data.result.activeToken;
         }
       });
 
@@ -2016,7 +2016,7 @@
         return false;
       }
 
-      const getAccountsPromise = new Promise((resolve, reject) => {
+      const getAccountsPromise = new Promise((resolve) => {
         console.log("Requesting accounts...");
 
         window.postMessage(
@@ -2038,8 +2038,10 @@
       await Promise.resolve(getAccountsPromise).then((data) => {
         console.log(data.result.log || data.result.error);
         state.accounts = data.result.Accounts;
+        state.activeToken = data.result.activeToken;
       });
 
+      console.log(state.activeToken);
       state.renderAccountsCallback();
 
       return;
@@ -2071,13 +2073,53 @@
 
       let success = false;
       await Promise.resolve(nextAccountPromise).then((data) => {
-        if (data.result.status === "Switched to next account") {
+        console.log(data.result.log || data.result.error);
+        if (data.result.status && data.result.status === "success") {
           success = true;
           state.activeToken = data.result.token;
         }
       });
 
       return success;
+    },
+    swapToAccount: async (token) => {
+      if (!token) {
+        console.warn("No token. Cannot swap to account.");
+        return false;
+      }
+      if (!state.helperInitSuccess) {
+        console.warn("Helper hasn't been initialized. Cannot add account.");
+        return false;
+      }
+
+      const swapToAccountPromise = new Promise((resolve) => {
+        console.log("Swapping accounts...");
+
+        window.postMessage(
+          {
+            type: "swapToAccount",
+            token,
+          },
+          "*"
+        );
+
+        function handler(event) {
+          if (event.source !== window) return;
+          if (event.data.type !== "swapToAccount_RESULT") return;
+          window.removeEventListener("message", handler);
+          resolve(event.data);
+        }
+        window.addEventListener("message", handler);
+      });
+
+      await Promise.resolve(swapToAccountPromise).then((data) => {
+        console.log(data.result.log || data.result.error);
+        if (data.result.status === "success") {
+          state.activeToken = data.result.token;
+        }
+      });
+
+      return;
     },
   };
 
@@ -7278,6 +7320,16 @@
           info.appendChild(id);
 
           const actions = document.createElement("div");
+          const swapBtn = document.createElement("button");
+          swapBtn.textContent = "Swap";
+          swapBtn.style.marginRight = "2px";
+          swapBtn.style.padding = "6px 8px";
+          swapBtn.style.background = "rgba(255,255,255,0.06)";
+          swapBtn.style.color = "white";
+          swapBtn.style.border = "1px solid rgba(255,255,255,0.08)";
+          swapBtn.style.borderRadius = "6px";
+          swapBtn.style.cursor = "pointer";
+          if (state.activeToken === acct.token) swapBtn.style.disabled = true;
           const removeBtn = document.createElement("button");
           removeBtn.textContent = "Remove";
           removeBtn.style.padding = "6px 8px";
@@ -7286,6 +7338,16 @@
           removeBtn.style.border = "1px solid rgba(255,255,255,0.08)";
           removeBtn.style.borderRadius = "6px";
           removeBtn.style.cursor = "pointer";
+
+          swapBtn.addEventListener("click", async () => {
+            const token = acct.token;
+            if (!token) {
+              console.warn("No token available for account. Cannot swap to");
+              return;
+            }
+            await Helper.swapToAccount(token);
+            renderAccounts();
+          });
 
           removeBtn.addEventListener("click", async () => {
             const token = acct.token;
@@ -7299,6 +7361,7 @@
             renderAccounts();
           });
 
+          actions.appendChild(swapBtn);
           actions.appendChild(removeBtn);
 
           row.appendChild(info);
