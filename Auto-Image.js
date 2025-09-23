@@ -9287,7 +9287,8 @@
     // }
 
     if (document.getElementById("serverUrlInput"))
-      document.getElementById("serverUrlInput").value = state.serverURL;
+      document.getElementById("serverUrlInput").value =
+        state.serverURL || "https://wplace-ink.duckdns.org";
     if (document.getElementById("serverAuthInput"))
       document.getElementById("serverAuthInput").value = state.serverAuth || "";
     // Ensure notification poller reflects current settings
@@ -10211,9 +10212,11 @@
       state.serverURL = settings.serverURL || "https://wplace-ink.duckdns.org";
       const serverSyncToggle = document.getElementById("serverSyncToggle");
       const serverURLContainer = document.getElementById("serverUrlContainer");
+      const serverUrlInput = document.getElementById("serverUrlInput");
       if (serverSyncToggle) serverSyncToggle.checked = state.serverSyncEnabled;
       if (serverURLContainer && state.serverSyncEnabled)
         serverURLContainer.style.display = "block";
+      serverUrlInput.value = state.serverURL;
 
       state.accountSwapperEnabled = settings.accountSwapperEnabled;
       state.serverAuth = settings.serverAuth || "";
