@@ -9640,49 +9640,51 @@
             pixelBatch.pixels = [];
           }
 
-          while (
+          if (
             state.currentCharges < state.cooldownChargeThreshold &&
             !state.stopFlag
           ) {
-            await Server.unlock(affectedArray);
+            while (1) {
+              await Server.unlock(affectedArray);
 
-            if (state.accountSwapperEnabled && !hasSwapped) {
-              await Helper.nextAccount();
-              hasSwapped = true;
-            }
-
-            const { charges, cooldown } = await WPlaceService.getCharges();
-            state.currentCharges = Math.floor(charges);
-            state.cooldown = cooldown;
-
-            if (state.currentCharges >= state.cooldownChargeThreshold) {
-              // Edge-trigger a notification the instant threshold is crossed
-              NotificationManager.maybeNotifyChargesReached(true);
-              updateStats();
-
-              resetLoop = true;
-
-              if (!state.stopFlag) {
-                saveBtn.disabled = true;
+              if (state.accountSwapperEnabled && !hasSwapped) {
+                await Helper.nextAccount();
+                hasSwapped = true;
               }
 
-              break;
+              const { charges, cooldown } = await WPlaceService.getCharges();
+              state.currentCharges = Math.floor(charges);
+              state.cooldown = cooldown;
+
+              if (state.currentCharges >= state.cooldownChargeThreshold) {
+                // Edge-trigger a notification the instant threshold is crossed
+                NotificationManager.maybeNotifyChargesReached(true);
+                updateStats();
+
+                resetLoop = true;
+
+                if (!state.stopFlag) {
+                  saveBtn.disabled = true;
+                }
+
+                break;
+              }
+
+              // Enable save button during cooldown wait
+              saveBtn.disabled = false;
+
+              updateUI("noChargesThreshold", "warning", {
+                time: Utils.formatTime(state.cooldown),
+                threshold: state.cooldownChargeThreshold,
+                current: state.currentCharges,
+              });
+              updateStats();
+
+              // Allow auto save during cooldown
+              Utils.performSmartSave();
+
+              await Utils.sleep(state.cooldown);
             }
-
-            // Enable save button during cooldown wait
-            saveBtn.disabled = false;
-
-            updateUI("noChargesThreshold", "warning", {
-              time: Utils.formatTime(state.cooldown),
-              threshold: state.cooldownChargeThreshold,
-              current: state.currentCharges,
-            });
-            updateStats();
-
-            // Allow auto save during cooldown
-            Utils.performSmartSave();
-
-            await Utils.sleep(state.cooldown);
           }
 
           if (state.stopFlag) break outerLoop;
