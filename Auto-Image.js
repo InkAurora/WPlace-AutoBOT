@@ -1946,6 +1946,8 @@
 
         window.postMessage(
           {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
             type: "addAccount",
             token,
           },
@@ -1985,6 +1987,8 @@
 
         window.postMessage(
           {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
             type: "removeAccount",
             token,
           },
@@ -2021,6 +2025,8 @@
 
         window.postMessage(
           {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
             type: "getAccounts",
           },
           "*"
@@ -2057,6 +2063,8 @@
 
         window.postMessage(
           {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
             type: "nextAccount",
           },
           "*"
@@ -2097,6 +2105,8 @@
 
         window.postMessage(
           {
+            authToken: state.serverAuth,
+            serverURL: state.serverURL,
             type: "swapToAccount",
             token,
           },
