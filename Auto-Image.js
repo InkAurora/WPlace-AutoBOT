@@ -9670,6 +9670,8 @@
                 break;
               }
 
+              if (state.stopFlag) break;
+
               // Enable save button during cooldown wait
               saveBtn.disabled = false;
 
