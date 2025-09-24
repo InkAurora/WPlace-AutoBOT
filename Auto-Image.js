@@ -9395,7 +9395,7 @@
             let status = await Server.lock(affectedArray);
 
             if (state.stopFlag || status === 0) {
-              await Server.unlock(affectedArray);
+              Server.unlock(affectedArray);
               Utils.showAlert(
                 "Could not sync with server. Please try again or disable server sync.",
                 "error"
@@ -9448,7 +9448,7 @@
           }
 
           if (state.stopFlag) {
-            await Server.unlock(affectedArray);
+            Server.unlock(affectedArray);
             return;
           }
 
@@ -9777,7 +9777,7 @@
         }
       }
 
-      await Server.unlock(affectedArray);
+      Server.unlock(affectedArray);
     } finally {
       if (window._chargesInterval) clearInterval(window._chargesInterval);
       window._chargesInterval = null;
