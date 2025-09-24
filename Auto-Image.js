@@ -2135,6 +2135,24 @@
 
   // SERVER SYNC
   const Server = {
+    fetchWithTimeout: async (url, body = {}, timeout = 5000) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      try {
+        const response = await fetch(url, {
+          ...body,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return response;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          throw new Error("Request timed out");
+        }
+        throw error;
+      }
+    },
     lock: async (tiles) => {
       // Return 1=proceed, 2=wait and retry, 0=abort
 
@@ -2154,24 +2172,24 @@
       try {
         if (!Array.isArray(tiles)) return 0;
 
-        const requests = tiles.map(async (pair) => {
-          const [x, y] = pair;
-          try {
-            const res = await fetch(`${state.serverURL}/lock`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ x, y, token: state.serverToken }),
-            });
-            return res.status;
-          } catch (err) {
-            return 0;
-          }
+        const tileArray = tiles.map((pair) => {
+          return { x: pair[0], y: pair[1] };
         });
 
-        const results = await Promise.all(requests);
+        const request = await Server.fetchWithTimeout(
+          `${state.serverURL}/lock`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tiles: tileArray,
+              token: state.serverToken,
+            }),
+          }
+        );
 
-        if (results.some((r) => r === 202)) return 2;
-        if (results.every((r) => r === 200)) {
+        if (request.status === 202) return 2;
+        if (request.status === 200) {
           state.serverLocked = true;
           return 1;
         }
@@ -2196,22 +2214,23 @@
       try {
         if (!Array.isArray(tiles)) return 0;
 
-        const requests = tiles.map(async (pair) => {
-          const [x, y] = pair;
-          try {
-            const res = await fetch(`${state.serverURL}/unlock`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ x, y, token: state.serverToken }),
-            });
-            return res.status;
-          } catch (err) {
-            return 0;
-          }
+        const tileArray = tiles.map((pair) => {
+          return { x: pair[0], y: pair[1] };
         });
 
-        const results = await Promise.all(requests);
-        if (results.every((r) => r === 200)) {
+        const request = await Server.fetchWithTimeout(
+          `${state.serverURL}/unlock`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tiles: tileArray,
+              token: state.serverToken,
+            }),
+          }
+        );
+
+        if (request.status === 200) {
           state.serverLocked = false;
           return 1;
         }
@@ -7341,7 +7360,10 @@
           swapBtn.style.border = "1px solid rgba(255, 255 ,255, 0.08)";
           swapBtn.style.borderRadius = "6px";
           swapBtn.style.cursor = "pointer";
-          if (state.activeToken === acct.token) {
+          if (
+            state.activeToken === acct.token ||
+            acct.name.includes("(expired)")
+          ) {
             swapBtn.disabled = true;
             swapBtn.style.color = "rgba(255, 255, 255, 0.4)";
             swapBtn.style.cursor = "default";
@@ -9372,9 +9394,14 @@
             updateUI("lockTiles", "default");
             let status = await Server.lock(affectedArray);
 
-            if (state.stopFlag) {
+            if (state.stopFlag || status === 0) {
               await Server.unlock(affectedArray);
-              return;
+              Utils.showAlert(
+                "Could not sync with server. Please try again or disable server sync.",
+                "error"
+              );
+              state.stopFlag = true;
+              break outerLoop;
             }
 
             if (status === 2) {
@@ -9646,17 +9673,17 @@
             !state.stopFlag
           ) {
             while (1) {
-              await Server.unlock(affectedArray);
-
               let { charges, cooldown } = await WPlaceService.getCharges();
               state.currentCharges = Math.floor(charges);
               state.cooldown = cooldown;
 
               if (
-                state.accountSwapperEnabled &&
-                !hasSwapped &&
-                state.currentCharges < state.cooldownChargeThreshold
-              ) {
+                state.currentCharges >= state.cooldownChargeThreshold &&
+                !hasSwapped
+              )
+                break;
+
+              if (state.accountSwapperEnabled && !hasSwapped) {
                 await Helper.nextAccount();
                 hasSwapped = true;
 
@@ -9670,6 +9697,8 @@
                 NotificationManager.maybeNotifyChargesReached(true);
                 updateStats();
 
+                await Server.unlock(affectedArray);
+
                 resetLoop = true;
 
                 if (!state.stopFlag) {
@@ -9678,6 +9707,8 @@
 
                 break;
               }
+
+              Server.unlock(affectedArray);
 
               if (state.stopFlag) break;
 
