@@ -9648,14 +9648,22 @@
             while (1) {
               await Server.unlock(affectedArray);
 
-              if (state.accountSwapperEnabled && !hasSwapped) {
-                await Helper.nextAccount();
-                hasSwapped = true;
-              }
-
-              const { charges, cooldown } = await WPlaceService.getCharges();
+              let { charges, cooldown } = await WPlaceService.getCharges();
               state.currentCharges = Math.floor(charges);
               state.cooldown = cooldown;
+
+              if (
+                state.accountSwapperEnabled &&
+                !hasSwapped &&
+                state.currentCharges < state.cooldownChargeThreshold
+              ) {
+                await Helper.nextAccount();
+                hasSwapped = true;
+
+                const { charges, cooldown } = await WPlaceService.getCharges();
+                state.currentCharges = Math.floor(charges);
+                state.cooldown = cooldown;
+              }
 
               if (state.currentCharges >= state.cooldownChargeThreshold) {
                 // Edge-trigger a notification the instant threshold is crossed
