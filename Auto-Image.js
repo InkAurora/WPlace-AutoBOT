@@ -1425,7 +1425,17 @@
 
   // UTILITY FUNCTIONS
   const Utils = {
-    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+    sleep: async (ms) => {
+      const interval = 1000; // Check every 1 second
+      let elapsed = 0;
+
+      while (elapsed < ms && !state.stopFlag) {
+        await new Promise((resolve) => setTimeout(resolve, interval));
+        elapsed += interval;
+      }
+
+      return state.stopFlag; // Returns true if flag is set, false if timed out
+    },
 
     waitForSelector: async (selector, interval = 200, timeout = 5000) => {
       const start = Date.now();
