@@ -1267,6 +1267,7 @@
         if (data.result.status && data.result.status === "success") {
           success = true;
           state.activeToken = data.result.token;
+          state.renderAccountsCallback();
         }
       });
 
