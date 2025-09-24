@@ -1388,11 +1388,9 @@
         return 0;
       }
 
-      if (!state.serverToken) {
-        state.serverToken = randStr(16);
-      }
+      if (!state.serverToken) return 0;
 
-      await Utils.sleep(5000); // Wait 5 seconds before unlocking to ensure server processes the changes
+      await Utils.sleep(3000); // Wait 5 seconds before unlocking to ensure server processes the changes
 
       try {
         if (!Array.isArray(tiles)) return 0;
