@@ -2873,10 +2873,16 @@
           credentials: "include",
         });
         const data = await res.json();
+
+        let cooldown = 30000;
+        if (data.charges) {
+          cooldown = (1 - (data.charges.count % 1)) * 30000 + 1000;
+        }
+
         return {
           charges: data.charges?.count || 0,
           max: data.charges?.max || 1,
-          cooldown: data.charges?.next || CONFIG.COOLDOWN_DEFAULT,
+          cooldown,
         };
       } catch (e) {
         console.error("Failed to get charges:", e);
