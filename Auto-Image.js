@@ -4957,7 +4957,7 @@
           <div class="wplace-cooldown-control">
             <label id="cooldownLabel">${Utils.t("waitCharges")}:</label>
             <div class="wplace-slider-container">
-              <input type="range" id="cooldownSlider" class="wplace-slider" min="1" max="1" value="${
+              <input type="range" id="cooldownSlider" class="wplace-slider" min="5" max="5" value="${
                 state.cooldownChargeThreshold
               }">
             </div>
